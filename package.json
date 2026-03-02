@@ -1,14 +1,24 @@
 {
   "name": "streampad",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/main/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently -n main,renderer \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev:main": "tsc -p tsconfig.json && electron .",
+    "dev:renderer": "vite --config vite.config.ts",
+    "build:main": "tsc -p tsconfig.json",
+    "build:renderer": "vite build --config vite.config.ts",
+    "build:preload": "tsc --project tsconfig.json --outDir dist --rootDir src src/preload.ts",
+    "build": "npm run build:main && npm run build:renderer",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "test": "echo \"No tests configured yet\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["midi", "launchpad", "macro", "streamdeck", "automation"],
+  "author": "StreamPad",
+  "license": "MIT",
+  "description": "Transform your Novation Launchpad into a fully configurable macro and automation surface",
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

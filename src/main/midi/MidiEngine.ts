@@ -316,7 +316,7 @@ export class MidiEngine extends EventEmitter {
     }, intervalMs);
   }
 
-  async shutdown(): void {
+  async shutdown(): Promise<void> {
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;

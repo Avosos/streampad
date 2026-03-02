@@ -49,7 +49,7 @@ export class AppController {
 
     // Wire up action executor callbacks
     this.actionExecutor.setPluginExecutor(
-      (pluginId, actionId, params) => this.pluginManager.executeAction(pluginId, actionId, params)
+      async (pluginId, actionId, params) => { await this.pluginManager.executeAction(pluginId, actionId, params); }
     );
     this.actionExecutor.setProfileSwitcher((profileId) => {
       this.profileManager.activateProfile(profileId);

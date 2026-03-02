@@ -1,0 +1,29 @@
+{
+  "appId": "com.streampad.app",
+  "productName": "StreamPad",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "assets/**/*"
+  ],
+  "win": {
+    "target": ["nsis", "portable"],
+    "icon": "assets/icon.ico"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "icon": "assets/icon.icns",
+    "category": "public.app-category.utilities"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "icon": "assets/icon.png",
+    "category": "Utility"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}

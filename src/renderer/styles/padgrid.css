@@ -1,0 +1,106 @@
+/* ============================================
+   Pad Grid
+   ============================================ */
+
+.padgrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad-gap);
+  aspect-ratio: 1;
+  max-width: min(100%, 560px);
+  max-height: min(100%, 560px);
+  width: 100%;
+}
+
+.padgrid-row {
+  display: flex;
+  gap: var(--pad-gap);
+  flex: 1;
+}
+
+.padgrid-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  height: 100%;
+}
+
+/* ─── Individual Pad ──────────────────────── */
+
+.pad {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: var(--pad-radius);
+  background: var(--pad-color, var(--bg-tertiary));
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pad:hover {
+  transform: scale(1.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.pad:active {
+  transform: scale(0.95);
+}
+
+.pad-active {
+  box-shadow: 0 0 16px 4px var(--pad-glow, rgba(108, 92, 231, 0.4));
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.02);
+}
+
+.pad-selected {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 12px 2px rgba(108, 92, 231, 0.3);
+}
+
+.pad-configured::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.pad-empty {
+  background: var(--bg-secondary);
+  opacity: 0.3;
+  cursor: default;
+}
+
+.pad-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  line-height: 1.1;
+  padding: 2px;
+  word-break: break-word;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.pad-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.pad-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
