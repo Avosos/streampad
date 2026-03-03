@@ -1,18 +1,20 @@
 import { exec } from 'child_process';
-import { Action } from '../../shared/types';
+import { Action, MediaKeyType } from '../../shared/types';
 import http from 'http';
 import https from 'https';
 import { URL } from 'url';
+import WebSocket from 'ws';
 
 /**
  * ActionExecutor – executes mapped actions in response to pad input.
  * Supports keyboard shortcuts, app launching, system commands,
- * HTTP requests, WebSocket messages, and multi-actions.
+ * HTTP requests, WebSocket messages, audio playback, media keys, and multi-actions.
  */
 export class ActionExecutor {
   private pluginExecutor?: (pluginId: string, actionId: string, params?: Record<string, unknown>) => Promise<void>;
   private profileSwitcher?: (profileId: string) => void;
   private layerSwitcher?: (layerId: string) => void;
+  private audioElements: Map<string, { process: ReturnType<typeof exec> }> = new Map();
 
   setPluginExecutor(fn: (pluginId: string, actionId: string, params?: Record<string, unknown>) => Promise<void>): void {
     this.pluginExecutor = fn;
@@ -91,6 +93,20 @@ export class ActionExecutor {
         case 'multi_action':
           for (const subAction of action.actions) {
             await this.execute(subAction);
+          }
+          break;
+
+        case 'play_audio':
+          await this.playAudio(action.filePath, action.volume);
+          break;
+
+        case 'media_key':
+          await this.executeMediaKey(action.key);
+          break;
+
+        case 'open_folder':
+          if (this.layerSwitcher) {
+            this.layerSwitcher(action.targetLayerId);
           }
           break;
       }
@@ -271,22 +287,104 @@ export class ActionExecutor {
   }
 
   private async executeWebSocketMessage(url: string, message: string): Promise<void> {
-    // Simple one-shot WebSocket message
     return new Promise((resolve, reject) => {
       try {
-        const WebSocket = require('ws');
         const ws = new WebSocket(url);
         ws.on('open', () => {
           ws.send(message);
           ws.close();
           resolve();
         });
-        ws.on('error', reject);
-      } catch {
-        console.warn('[ActionExecutor] ws module not available for WebSocket');
+        ws.on('error', (err) => {
+          console.warn('[ActionExecutor] WebSocket error:', err.message);
+          resolve(); // Don't reject, just warn
+        });
+      } catch (err: any) {
+        console.warn('[ActionExecutor] WebSocket failed:', err.message);
         resolve();
       }
     });
+  }
+
+  /**
+   * Play an audio file using platform-native tools.
+   */
+  private async playAudio(filePath: string, volume: number = 1): Promise<void> {
+    const platform = process.platform;
+    const vol = Math.round(volume * 100);
+
+    if (platform === 'win32') {
+      // Use PowerShell MediaPlayer
+      const ps = `
+        Add-Type -AssemblyName presentationCore;
+        $player = New-Object System.Windows.Media.MediaPlayer;
+        $player.Open([System.Uri]"${filePath.replace(/\\/g, '\\\\')}");
+        $player.Volume = ${volume};
+        $player.Play();
+        Start-Sleep -Seconds 10;
+      `;
+      exec(`powershell -Command "${ps.replace(/\n/g, ' ')}"`, { windowsHide: true });
+    } else if (platform === 'darwin') {
+      exec(`afplay "${filePath}" --volume ${volume}`);
+    } else {
+      exec(`paplay "${filePath}" --volume=${Math.round(volume * 65536)}`);
+    }
+  }
+
+  /**
+   * Simulate media key press using platform-native tools.
+   */
+  private async executeMediaKey(key: MediaKeyType): Promise<void> {
+    const platform = process.platform;
+
+    if (platform === 'win32') {
+      // Use PowerShell to simulate media keys via Win32 API
+      const keyMap: Record<MediaKeyType, string> = {
+        play_pause: '0xB3',   // VK_MEDIA_PLAY_PAUSE
+        next_track: '0xB0',   // VK_MEDIA_NEXT_TRACK
+        prev_track: '0xB1',   // VK_MEDIA_PREV_TRACK
+        stop: '0xB2',         // VK_MEDIA_STOP
+        volume_up: '0xAF',    // VK_VOLUME_UP
+        volume_down: '0xAE',  // VK_VOLUME_DOWN
+        mute: '0xAD',         // VK_VOLUME_MUTE
+      };
+      const vk = keyMap[key];
+      if (vk) {
+        const ps = `
+          $sig = '[DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);';
+          $type = Add-Type -MemberDefinition $sig -Name WinAPI -Namespace MediaKeys -PassThru;
+          $type::keybd_event(${vk}, 0, 0, [UIntPtr]::Zero);
+          $type::keybd_event(${vk}, 0, 2, [UIntPtr]::Zero);
+        `;
+        return new Promise((resolve) => {
+          exec(`powershell -Command "${ps.replace(/\n/g, ' ')}"`, { windowsHide: true }, () => resolve());
+        });
+      }
+    } else if (platform === 'darwin') {
+      const asMap: Record<MediaKeyType, number> = {
+        play_pause: 16,
+        next_track: 17,
+        prev_track: 18,
+        stop: 16, // macOS uses play_pause to stop
+        volume_up: 0,
+        volume_down: 1,
+        mute: 7,
+      };
+      // Using NX system-defined keys
+      const keyCode = asMap[key];
+      exec(`osascript -e 'tell application "System Events" to key code ${keyCode}'`);
+    } else {
+      const xdoMap: Record<MediaKeyType, string> = {
+        play_pause: 'XF86AudioPlay',
+        next_track: 'XF86AudioNext',
+        prev_track: 'XF86AudioPrev',
+        stop: 'XF86AudioStop',
+        volume_up: 'XF86AudioRaiseVolume',
+        volume_down: 'XF86AudioLowerVolume',
+        mute: 'XF86AudioMute',
+      };
+      exec(`xdotool key ${xdoMap[key]}`);
+    }
   }
 
   private delay(ms: number): Promise<void> {

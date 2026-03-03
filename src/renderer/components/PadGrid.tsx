@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Layer, PadConfig, PadColor } from '../../shared/types';
 import '../styles/padgrid.css';
 
@@ -7,6 +7,13 @@ interface PadGridProps {
   activePads: Set<number>;
   selectedPad: PadConfig | null;
   onPadSelect: (pad: PadConfig) => void;
+  onPadUpdate?: (pad: PadConfig) => void;
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  pad: PadConfig;
 }
 
 function padColorToCSS(color: PadColor, brightness: number = 1): string {
@@ -20,7 +27,68 @@ function padColorToGlow(color: PadColor): string {
   return `rgba(${color.r}, ${color.g}, ${color.b}, 0.4)`;
 }
 
-export default function PadGrid({ layer, activePads, selectedPad, onPadSelect }: PadGridProps) {
+// Clipboard for copy/paste
+let clipboardPad: PadConfig | null = null;
+
+export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, onPadUpdate }: PadGridProps) {
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+    if (contextMenu) {
+      document.addEventListener('mousedown', handler);
+    }
+    return () => document.removeEventListener('mousedown', handler);
+  }, [contextMenu]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, pad: PadConfig) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, pad });
+  }, []);
+
+  const handleCopy = () => {
+    if (contextMenu) {
+      clipboardPad = JSON.parse(JSON.stringify(contextMenu.pad));
+      setContextMenu(null);
+    }
+  };
+
+  const handlePaste = () => {
+    if (contextMenu && clipboardPad && onPadUpdate) {
+      const updated: PadConfig = {
+        ...contextMenu.pad,
+        label: clipboardPad.label,
+        icon: clipboardPad.icon,
+        triggers: JSON.parse(JSON.stringify(clipboardPad.triggers)),
+        ledDefault: { ...clipboardPad.ledDefault },
+        ledActive: { ...clipboardPad.ledActive },
+      };
+      onPadUpdate(updated);
+      setContextMenu(null);
+    }
+  };
+
+  const handleClear = () => {
+    if (contextMenu && onPadUpdate) {
+      const cleared: PadConfig = {
+        ...contextMenu.pad,
+        label: '',
+        icon: '',
+        triggers: [],
+        ledDefault: { color: { r: 0, g: 0, b: 0 }, brightness: 0 },
+        ledActive: { color: { r: 60, g: 60, b: 60 }, brightness: 0.5 },
+      };
+      onPadUpdate(cleared);
+      setContextMenu(null);
+    }
+  };
+
   if (!layer) {
     return (
       <div className="padgrid-empty">
@@ -62,6 +130,7 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect }:
                   '--pad-glow': glowColor,
                 } as React.CSSProperties}
                 onClick={() => onPadSelect(pad)}
+                onContextMenu={(e) => handleContextMenu(e, pad)}
                 title={pad.label || `Pad ${pad.row + 1}×${pad.col + 1} (Note ${pad.midiNote})`}
               >
                 {pad.label && <span className="pad-label">{pad.label}</span>}
@@ -74,6 +143,30 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect }:
           })}
         </div>
       ))}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          ref={menuRef}
+          className="pad-context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button className="context-menu-item" onClick={handleCopy}>
+            Copy
+          </button>
+          <button
+            className="context-menu-item"
+            onClick={handlePaste}
+            disabled={!clipboardPad}
+          >
+            Paste
+          </button>
+          <div className="context-menu-divider" />
+          <button className="context-menu-item context-menu-danger" onClick={handleClear}>
+            Clear Pad
+          </button>
+        </div>
+      )}
     </div>
   );
 }

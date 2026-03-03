@@ -3,6 +3,7 @@ import Header from './components/Header';
 import PadGrid from './components/PadGrid';
 import Sidebar from './components/Sidebar';
 import DeviceBar from './components/DeviceBar';
+import Settings from './components/Settings';
 import { Profile, PadConfig, MidiDeviceInfo, Layer, MidiMessage, InputEvent } from '../shared/types';
 import './styles/app.css';
 
@@ -23,6 +24,7 @@ export default function App() {
   const [selectedPad, setSelectedPad] = useState<PadConfig | null>(null);
   const [devices, setDevices] = useState<MidiDeviceInfo[]>([]);
   const [activePads, setActivePads] = useState<Set<number>>(new Set());
+  const [showSettings, setShowSettings] = useState(false);
 
   // ─── Load initial state ────────────────────────────────
   useEffect(() => {
@@ -49,29 +51,41 @@ export default function App() {
 
   // ─── Listen for MIDI events (visual feedback in GUI) ───
   useEffect(() => {
-    api.midi.onMessage((_deviceId: string, msg: MidiMessage) => {
-      if (msg.type === 'noteon' && msg.velocity > 0) {
-        setActivePads((prev) => new Set(prev).add(msg.note));
-      } else if (msg.type === 'noteoff' || (msg.type === 'noteon' && msg.velocity === 0)) {
-        setActivePads((prev) => {
-          const next = new Set(prev);
-          next.delete(msg.note);
-          return next;
-        });
-      }
-    });
+    const unsubs: Array<() => void> = [];
 
-    api.midi.onDeviceConnected((device: MidiDeviceInfo) => {
-      setDevices((prev) => [...prev.filter((d) => d.id !== device.id), device]);
-    });
+    unsubs.push(
+      api.midi.onMessage((_deviceId: string, msg: MidiMessage) => {
+        if (msg.type === 'noteon' && msg.velocity > 0) {
+          setActivePads((prev) => new Set(prev).add(msg.note));
+        } else if (msg.type === 'noteoff' || (msg.type === 'noteon' && msg.velocity === 0)) {
+          setActivePads((prev) => {
+            const next = new Set(prev);
+            next.delete(msg.note);
+            return next;
+          });
+        }
+      })
+    );
 
-    api.midi.onDeviceDisconnected((device: MidiDeviceInfo) => {
-      setDevices((prev) => prev.map((d) => (d.id === device.id ? { ...d, isConnected: false } : d)));
-    });
+    unsubs.push(
+      api.midi.onDeviceConnected((device: MidiDeviceInfo) => {
+        setDevices((prev) => [...prev.filter((d) => d.id !== device.id), device]);
+      })
+    );
 
-    api.pads.onTrigger((event: PadTriggerEvent) => {
-      // Could be used for additional GUI feedback
-    });
+    unsubs.push(
+      api.midi.onDeviceDisconnected((device: MidiDeviceInfo) => {
+        setDevices((prev) => prev.map((d) => (d.id === device.id ? { ...d, isConnected: false } : d)));
+      })
+    );
+
+    unsubs.push(
+      api.pads.onTrigger((_event: PadTriggerEvent) => {
+        // Could be used for additional GUI feedback
+      })
+    );
+
+    return () => unsubs.forEach((fn) => fn());
   }, []);
 
   // ─── Profile management ────────────────────────────────
@@ -106,6 +120,19 @@ export default function App() {
       }
     }
   }, [activeProfile, profiles, handleProfileSelect]);
+
+  const handleImportProfile = useCallback(async (filePath: string) => {
+    try {
+      // Read file via IPC and import
+      const profile = await api.profiles.import(filePath);
+      if (profile) {
+        setProfiles((prev) => [...prev, profile]);
+        handleProfileSelect(profile.id);
+      }
+    } catch (err) {
+      console.error('Import failed:', err);
+    }
+  }, [handleProfileSelect]);
 
   // ─── Layer management ──────────────────────────────────
   const handleLayerSwitch = useCallback(async (layerId: string) => {
@@ -150,43 +177,54 @@ export default function App() {
         onProfileSelect={handleProfileSelect}
         onCreateProfile={handleCreateProfile}
         onDeleteProfile={handleDeleteProfile}
+        onImportProfile={handleImportProfile}
+        onOpenSettings={() => setShowSettings((s) => !s)}
       />
       <div className="app-body">
-        <div className="app-main">
-          <DeviceBar devices={devices} />
-          <div className="grid-container">
-            <PadGrid
-              layer={activeLayer}
-              activePads={activePads}
-              selectedPad={selectedPad}
-              onPadSelect={handlePadSelect}
-            />
-          </div>
-          {activeProfile && activeProfile.layers.length > 1 && (
-            <div className="layer-bar">
-              {activeProfile.layers.map((layer) => (
-                <button
-                  key={layer.id}
-                  className={`layer-btn ${layer.id === activeLayer?.id ? 'active' : ''}`}
-                  onClick={() => handleLayerSwitch(layer.id)}
-                >
-                  {layer.name}
-                </button>
-              ))}
-              <button
-                className="layer-btn add"
-                onClick={() => handleCreateLayer(`Layer ${activeProfile.layers.length + 1}`)}
-              >
-                +
-              </button>
+        {showSettings ? (
+          <Settings onClose={() => setShowSettings(false)} />
+        ) : (
+          <>
+            <div className="app-main">
+              <DeviceBar devices={devices} />
+              <div className="grid-container">
+                <PadGrid
+                  layer={activeLayer}
+                  activePads={activePads}
+                  selectedPad={selectedPad}
+                  onPadSelect={handlePadSelect}
+                  onPadUpdate={handlePadUpdate}
+                />
+              </div>
+              {activeProfile && activeProfile.layers.length > 1 && (
+                <div className="layer-bar">
+                  {activeProfile.layers.map((layer) => (
+                    <button
+                      key={layer.id}
+                      className={`layer-btn ${layer.id === activeLayer?.id ? 'active' : ''}`}
+                      onClick={() => handleLayerSwitch(layer.id)}
+                    >
+                      {layer.name}
+                    </button>
+                  ))}
+                  <button
+                    className="layer-btn add"
+                    onClick={() => handleCreateLayer(`Layer ${activeProfile.layers.length + 1}`)}
+                  >
+                    +
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <Sidebar
-          selectedPad={selectedPad}
-          onPadUpdate={handlePadUpdate}
-          onClose={() => setSelectedPad(null)}
-        />
+            <Sidebar
+              selectedPad={selectedPad}
+              onPadUpdate={handlePadUpdate}
+              onClose={() => setSelectedPad(null)}
+              profiles={profiles}
+              activeProfile={activeProfile}
+            />
+          </>
+        )}
       </div>
     </div>
   );

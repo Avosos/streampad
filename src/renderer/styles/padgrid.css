@@ -1,15 +1,21 @@
 /* ============================================
-   Pad Grid
+   StreamPad – Pad Grid (8×8)
    ============================================ */
 
 .padgrid {
   display: flex;
   flex-direction: column;
   gap: var(--pad-gap);
+  padding: 14px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.02);
   aspect-ratio: 1;
-  max-width: min(100%, 560px);
-  max-height: min(100%, 560px);
-  width: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  height: auto;
 }
 
 .padgrid-row {
@@ -18,83 +24,93 @@
   flex: 1;
 }
 
-.padgrid-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  font-size: 14px;
-  height: 100%;
-}
-
-/* ─── Individual Pad ──────────────────────── */
-
+/* ── Individual Pad ─────────────────────────── */
 .pad {
   flex: 1;
   aspect-ratio: 1;
-  border-radius: var(--pad-radius);
-  background: var(--pad-color, var(--bg-tertiary));
-  border: 2px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s;
+  border-radius: var(--pad-radius);
+  background: var(--pad-color, var(--bg-tertiary));
+  border: 1.5px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   position: relative;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
   overflow: hidden;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   min-width: 0;
 }
 
 .pad:hover {
   transform: scale(1.04);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1;
 }
 
 .pad:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
+/* Active (MIDI note-on) */
 .pad-active {
-  box-shadow: 0 0 16px 4px var(--pad-glow, rgba(108, 92, 231, 0.4));
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: scale(1.02);
+  transform: scale(0.97);
+  box-shadow:
+    0 0 20px 4px var(--pad-glow, rgba(249, 115, 22, 0.3)),
+    inset 0 0 12px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
+/* Selected in sidebar */
 .pad-selected {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 2px var(--accent), 0 0 12px 2px rgba(108, 92, 231, 0.3);
+  box-shadow:
+    0 0 0 2px var(--accent-muted),
+    0 0 20px 2px var(--accent-glow);
 }
 
+/* Has a configured action */
 .pad-configured::after {
   content: '';
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 5px;
+  right: 5px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
 }
 
+/* Empty pad slot */
 .pad-empty {
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
+  border-color: transparent;
   opacity: 0.3;
-  cursor: default;
+  pointer-events: none;
 }
 
+/* Pad inner elements */
 .pad-label {
-  font-size: 9px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 10px;
+  line-height: 1.2;
   text-align: center;
-  line-height: 1.1;
-  padding: 2px;
+  padding: 0 4px;
   word-break: break-word;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .pad-icon {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -102,5 +118,71 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Empty state ────────────────────────────── */
+.padgrid-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── Context Menu ───────────────────────────── */
+.pad-context-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 140px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  animation: contextFadeIn 0.1s ease;
+}
+
+@keyframes contextFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.context-menu-item:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.context-menu-item:disabled:hover {
+  background: none;
+}
+
+.context-menu-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--border-default);
+  margin: 4px 0;
 }

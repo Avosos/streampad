@@ -1,5 +1,6 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow, dialog, globalShortcut } from 'electron';
 import { AppController } from '../core/AppController';
+import { SettingsManager } from '../settings/SettingsManager';
 import { IPC_CHANNELS, PadConfig, Profile } from '../../shared/types';
 
 /**
@@ -7,6 +8,9 @@ import { IPC_CHANNELS, PadConfig, Profile } from '../../shared/types';
  * to the renderer process via IPC channels.
  */
 export function setupIpcBridge(appController: AppController, mainWindow: BrowserWindow): void {
+  const settings = new SettingsManager();
+  settings.load();
+
   const send = (channel: string, ...args: any[]) => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.webContents.send(channel, ...args);
@@ -117,10 +121,118 @@ export function setupIpcBridge(appController: AppController, mainWindow: Browser
     return appController.pluginManager.unloadPlugin(pluginId);
   });
 
+  ipcMain.handle(IPC_CHANNELS.PLUGIN_INSTALL, async (_event, _pluginPath: string) => {
+    try {
+      // Reload all plugins to pick up newly installed ones
+      await appController.pluginManager.loadAll();
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // ─── App State ───────────────────────────────────────────────
 
   ipcMain.handle(IPC_CHANNELS.APP_STATE, () => {
     return appController.getState();
+  });
+
+  // ─── Settings ────────────────────────────────────────────────
+
+  ipcMain.handle(IPC_CHANNELS.APP_SETTINGS_GET, () => {
+    return settings.get();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.APP_SETTINGS_SET, (_event, updates: any) => {
+    return settings.set(updates);
+  });
+
+  // ─── Window Controls ─────────────────────────────────────────
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MINIMIZE, () => {
+    mainWindow.minimize();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MAXIMIZE, () => {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+    return mainWindow.isMaximized();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_CLOSE, () => {
+    mainWindow.close();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_IS_MAXIMIZED, () => {
+    return mainWindow.isMaximized();
+  });
+
+  // ─── Hotkey Recording ────────────────────────────────────────
+
+  let recordedKeys: Set<string> = new Set();
+  let isRecording = false;
+
+  ipcMain.handle(IPC_CHANNELS.HOTKEY_RECORD_START, () => {
+    isRecording = true;
+    recordedKeys.clear();
+
+    const { webContents } = mainWindow;
+
+    // Listen for key events on the focused window
+    const keyHandler = (_event: any, input: Electron.Input) => {
+      if (!isRecording) return;
+
+      const key = input.key.toLowerCase();
+      const modifiers: string[] = [];
+      if (input.control) modifiers.push('ctrl');
+      if (input.alt) modifiers.push('alt');
+      if (input.shift) modifiers.push('shift');
+      if (input.meta) modifiers.push('meta');
+
+      // Don't add modifier-only keys as the main key
+      const isModifier = ['control', 'alt', 'shift', 'meta'].includes(key);
+      if (!isModifier) {
+        const combo = [...modifiers, key];
+        send(IPC_CHANNELS.HOTKEY_RECORDED, combo);
+        isRecording = false;
+      }
+    };
+
+    webContents.on('before-input-event', keyHandler);
+
+    // Auto-stop after 10 seconds
+    setTimeout(() => {
+      if (isRecording) {
+        isRecording = false;
+        webContents.removeListener('before-input-event', keyHandler);
+        send(IPC_CHANNELS.HOTKEY_RECORDED, []);
+      }
+    }, 10000);
+
+    return true;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HOTKEY_RECORD_STOP, () => {
+    isRecording = false;
+    return true;
+  });
+
+  // ─── File Dialogs ────────────────────────────────────────────
+
+  ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_FILE, async (_event, options?: any) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      ...options,
+    });
+    return result.canceled ? null : result.filePaths[0] || null;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SAVE_FILE, async (_event, options?: any) => {
+    const result = await dialog.showSaveDialog(mainWindow, options || {});
+    return result.canceled ? null : result.filePath || null;
   });
 
   // ─── Profile/Layer change notifications ──────────────────────

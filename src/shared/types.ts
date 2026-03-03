@@ -63,7 +63,10 @@ export type ActionType =
   | 'profile_switch'
   | 'layer_switch'
   | 'delay'
-  | 'multi_action';
+  | 'multi_action'
+  | 'play_audio'
+  | 'media_key'
+  | 'open_folder';
 
 export interface ActionBase {
   id: string;
@@ -141,6 +144,32 @@ export interface MultiAction extends ActionBase {
   actions: Action[];
 }
 
+export interface PlayAudioAction extends ActionBase {
+  type: 'play_audio';
+  filePath: string;
+  volume: number; // 0-1
+}
+
+export type MediaKeyType =
+  | 'play_pause'
+  | 'next_track'
+  | 'prev_track'
+  | 'stop'
+  | 'volume_up'
+  | 'volume_down'
+  | 'mute';
+
+export interface MediaKeyAction extends ActionBase {
+  type: 'media_key';
+  key: MediaKeyType;
+}
+
+export interface OpenFolderAction extends ActionBase {
+  type: 'open_folder';
+  targetLayerId: string;
+  returnLayerId?: string;
+}
+
 export type Action =
   | KeyboardShortcutAction
   | HotkeySequenceAction
@@ -153,7 +182,10 @@ export type Action =
   | ProfileSwitchAction
   | LayerSwitchAction
   | DelayAction
-  | MultiAction;
+  | MultiAction
+  | PlayAudioAction
+  | MediaKeyAction
+  | OpenFolderAction;
 
 // --------------- Pad Configuration ---------------
 
@@ -314,4 +346,45 @@ export const IPC_CHANNELS = {
   // App
   APP_STATE: 'app:state',
   APP_SETTINGS: 'app:settings',
+  APP_SETTINGS_GET: 'app:settings:get',
+  APP_SETTINGS_SET: 'app:settings:set',
+
+  // Window controls
+  WINDOW_MINIMIZE: 'window:minimize',
+  WINDOW_MAXIMIZE: 'window:maximize',
+  WINDOW_CLOSE: 'window:close',
+  WINDOW_IS_MAXIMIZED: 'window:is-maximized',
+
+  // Hotkey recording
+  HOTKEY_RECORD_START: 'hotkey:record:start',
+  HOTKEY_RECORD_STOP: 'hotkey:record:stop',
+  HOTKEY_RECORDED: 'hotkey:recorded',
+
+  // File dialogs
+  DIALOG_OPEN_FILE: 'dialog:open-file',
+  DIALOG_SAVE_FILE: 'dialog:save-file',
 } as const;
+
+// --------------- App Settings ---------------
+
+export interface AppSettings {
+  theme: 'dark' | 'light';
+  holdThresholdMs: number;
+  multiPressWindowMs: number;
+  autoConnect: boolean;
+  startMinimized: boolean;
+  minimizeToTray: boolean;
+  lastDeviceId: string | null;
+  pluginDir: string | null;
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  theme: 'dark',
+  holdThresholdMs: 500,
+  multiPressWindowMs: 300,
+  autoConnect: true,
+  startMinimized: false,
+  minimizeToTray: true,
+  lastDeviceId: null,
+  pluginDir: null,
+};
