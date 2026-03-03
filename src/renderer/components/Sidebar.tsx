@@ -52,7 +52,7 @@ const ACTION_TYPES: { value: ActionType; label: string }[] = [
   { value: 'layer_switch', label: 'Switch Layer' },
   { value: 'delay', label: 'Delay' },
   { value: 'multi_action', label: 'Multi-Action' },
-  { value: 'play_audio', label: 'Play Audio' },
+  { value: 'play_audio', label: '🔊 Play Audio (Soundboard)' },
   { value: 'media_key', label: 'Media Key' },
   { value: 'open_folder', label: 'Open Folder (Layer)' },
 ];
@@ -250,7 +250,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
     <div className="sidebar">
       <div className="sidebar-header">
         <h3>
-          Pad {pad.row + 1}×{pad.col + 1}
+          {pad.padShape === 'round' ? '● ' : ''}Pad {pad.row}×{pad.col}
           <span className="sidebar-note">Note {pad.midiNote}</span>
         </h3>
         <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
@@ -266,6 +266,68 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
             onChange={(e) => updateField('label', e.target.value)}
             placeholder="Button name..."
           />
+        </div>
+
+        {/* Icon (emoji or symbol) */}
+        <div className="field">
+          <label className="field-label">Icon (emoji)</label>
+          <div className="action-fields">
+            <input
+              type="text"
+              value={pad.icon || ''}
+              onChange={(e) => updateField('icon', e.target.value)}
+              placeholder="e.g. 🎵 🔊 🌐 🎮 ..."
+              style={{ flex: 1 }}
+            />
+            {pad.icon && (
+              <button className="btn btn-ghost btn-sm" onClick={() => updateField('icon', '')}>✕</button>
+            )}
+          </div>
+          <div className="emoji-quick-picks">
+            {['🎵', '🔊', '🌐', '🎮', '⚡', '🎬', '📁', '💡', '🔴', '🟢', '🔵', '⬆', '⬇', '⬅', '➡', '⏯'].map((e) => (
+              <button
+                key={e}
+                className={`emoji-btn ${pad.icon === e ? 'emoji-btn-active' : ''}`}
+                onClick={() => updateField('icon', e)}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Image */}
+        <div className="field">
+          <label className="field-label">Image</label>
+          <div className="action-fields">
+            <input
+              type="text"
+              value={pad.image || ''}
+              onChange={(e) => updateField('image', e.target.value)}
+              placeholder="Image path or URL..."
+              style={{ flex: 1 }}
+            />
+            <button className="btn btn-ghost btn-sm" onClick={async () => {
+              const filePath = await api.dialog.openFile({
+                filters: [
+                  { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'] },
+                  { name: 'All Files', extensions: ['*'] },
+                ],
+              });
+              if (filePath) {
+                // Convert to file:// URL for the renderer
+                updateField('image', `file://${filePath.replace(/\\/g, '/')}`);
+              }
+            }}>Browse</button>
+            {pad.image && (
+              <button className="btn btn-ghost btn-sm" onClick={() => updateField('image', '')}>✕</button>
+            )}
+          </div>
+          {pad.image && (
+            <div className="image-preview">
+              <img src={pad.image} alt="Preview" />
+            </div>
+          )}
         </div>
 
         {/* Trigger Type */}

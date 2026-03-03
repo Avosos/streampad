@@ -308,26 +308,40 @@ export class ActionExecutor {
 
   /**
    * Play an audio file using platform-native tools.
+   * Supports stop-on-repress: pressing the same pad again stops the current sound.
    */
   private async playAudio(filePath: string, volume: number = 1): Promise<void> {
     const platform = process.platform;
-    const vol = Math.round(volume * 100);
+
+    // Stop any currently playing instance of this file
+    const existing = this.audioElements.get(filePath);
+    if (existing) {
+      try { existing.process.kill(); } catch { /* ignore */ }
+      this.audioElements.delete(filePath);
+    }
 
     if (platform === 'win32') {
       // Use PowerShell MediaPlayer
-      const ps = `
-        Add-Type -AssemblyName presentationCore;
-        $player = New-Object System.Windows.Media.MediaPlayer;
-        $player.Open([System.Uri]"${filePath.replace(/\\/g, '\\\\')}");
-        $player.Volume = ${volume};
-        $player.Play();
-        Start-Sleep -Seconds 10;
-      `;
-      exec(`powershell -Command "${ps.replace(/\n/g, ' ')}"`, { windowsHide: true });
+      const escapedPath = filePath.replace(/'/g, "''");
+      const ps = [
+        "Add-Type -AssemblyName presentationCore;",
+        "$p = New-Object System.Windows.Media.MediaPlayer;",
+        `$p.Open([System.Uri]'${escapedPath}');`,
+        `$p.Volume = ${volume};`,
+        "$p.Play();",
+        "Start-Sleep -Seconds 30;",
+      ].join(' ');
+      const proc = exec(`powershell -Command "${ps}"`, { windowsHide: true });
+      this.audioElements.set(filePath, { process: proc });
+      proc.on('exit', () => this.audioElements.delete(filePath));
     } else if (platform === 'darwin') {
-      exec(`afplay "${filePath}" --volume ${volume}`);
+      const proc = exec(`afplay "${filePath}" --volume ${volume}`);
+      this.audioElements.set(filePath, { process: proc });
+      proc.on('exit', () => this.audioElements.delete(filePath));
     } else {
-      exec(`paplay "${filePath}" --volume=${Math.round(volume * 65536)}`);
+      const proc = exec(`paplay "${filePath}" --volume=${Math.round(volume * 65536)}`);
+      this.audioElements.set(filePath, { process: proc });
+      proc.on('exit', () => this.audioElements.delete(filePath));
     }
   }
 

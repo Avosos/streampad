@@ -1,5 +1,7 @@
 /* ============================================
-   StreamPad – Pad Grid (8×8)
+   StreamPad – Pad Grid (10×10 Launchpad layout)
+   Includes 8×8 main grid + 4×8 side/top/bottom
+   round buttons with empty corners.
    ============================================ */
 
 .padgrid {
@@ -11,7 +13,8 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-default);
   box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.02);
-  aspect-ratio: 1;
+  /* keep it square-ish but allow slight stretch for the extra rows */
+  aspect-ratio: 10 / 10;
   height: 100%;
   max-height: 100%;
   max-width: 100%;
@@ -21,6 +24,18 @@
   display: flex;
   gap: var(--pad-gap);
   flex: 1;
+}
+
+/* Top and bottom round-button rows are slightly shorter */
+.padgrid-row-top,
+.padgrid-row-bottom {
+  flex: 0.55;
+}
+
+/* ── Empty corner cells ─────────────────────── */
+.pad-corner {
+  flex: 1;
+  pointer-events: none;
 }
 
 /* ── Individual Pad ─────────────────────────── */
@@ -44,6 +59,20 @@
   overflow: hidden;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   min-width: 0;
+}
+
+/* ── Round side / top / bottom buttons ──────── */
+.pad-round {
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+}
+
+/* Side buttons slightly narrower to visually separate from main grid */
+.pad-side-left,
+.pad-side-right {
+  flex: 0.7;
 }
 
 .pad:hover {
@@ -87,6 +116,13 @@
   box-shadow: 0 0 6px var(--accent);
 }
 
+.pad-round.pad-configured::after {
+  top: 3px;
+  right: 3px;
+  width: 4px;
+  height: 4px;
+}
+
 /* Empty pad slot */
 .pad-empty {
   background: var(--bg-tertiary);
@@ -95,7 +131,7 @@
   pointer-events: none;
 }
 
-/* Pad inner elements */
+/* ── Pad inner elements ─────────────────────── */
 .pad-label {
   font-size: 10px;
   line-height: 1.2;
@@ -108,9 +144,34 @@
   overflow: hidden;
 }
 
+.pad-round .pad-label {
+  font-size: 7px;
+  -webkit-line-clamp: 2;
+  padding: 0 2px;
+}
+
 .pad-icon {
   font-size: 18px;
   line-height: 1;
+}
+
+.pad-round .pad-icon {
+  font-size: 14px;
+}
+
+.pad-image {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  pointer-events: none;
+  border-radius: 4px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+}
+
+.pad-round .pad-image {
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
 }
 
 .pad-dot {

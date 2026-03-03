@@ -2,7 +2,8 @@ import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-import { Profile, Layer, PadConfig, LedState } from '../../shared/types';
+import { Profile, Layer, PadConfig, LedState, PadShape } from '../../shared/types';
+import { padShapeAt, PRO_MK2_BUTTON_LABELS } from '../../shared/devices';
 import { v4 as uuid } from 'uuid';
 
 const DEFAULT_LED: LedState = {
@@ -48,7 +49,12 @@ export class ProfileManager extends EventEmitter {
       try {
         const content = fs.readFileSync(path.join(this.profileDir, file), 'utf-8');
         const profile: Profile = JSON.parse(content);
-        this.profiles.set(profile.id, profile);
+        const migrated = this.migrateProfile(profile);
+        this.profiles.set(migrated.id, migrated);
+        if (migrated !== profile) {
+          this.saveProfile(migrated);
+          console.log(`[ProfileManager] Migrated profile "${migrated.name}" to 10×10 layout`);
+        }
       } catch (err) {
         console.error(`[ProfileManager] Failed to load profile ${file}:`, err);
       }
@@ -259,6 +265,73 @@ export class ProfileManager extends EventEmitter {
     fs.writeFileSync(filePath, JSON.stringify(profile, null, 2), 'utf-8');
   }
 
+  /**
+   * Migrate an old 8×8 profile to the new 10×10 layout.
+   * Old profiles have pads with rows 0-7 / cols 0-7 and no padShape field.
+   * We remap them:  old (row, col) → new (row+1, col+1)  to fit inside
+   * the main 8×8 region of the 10×10 grid, then add missing side buttons.
+   */
+  private migrateProfile(profile: Profile): Profile {
+    let migrated = false;
+
+    for (const layer of profile.layers) {
+      // Detect old format: any pad with row < 10 that has no padShape AND
+      // no pads with row 0 col 0 being a side button (i.e., max row is 7)
+      const maxRow = Math.max(...layer.pads.map(p => p.row));
+      const maxCol = Math.max(...layer.pads.map(p => p.col));
+      const hasPadShape = layer.pads.some(p => p.padShape !== undefined);
+
+      if (maxRow <= 7 && maxCol <= 7 && !hasPadShape) {
+        // Remap: shift existing pads into the inner 8×8 region (rows 1-8, cols 1-8)
+        for (const pad of layer.pads) {
+          pad.row += 1;
+          pad.col += 1;
+          pad.padShape = 'square';
+        }
+
+        // Create a lookup of which positions already have pads
+        const existing = new Set(layer.pads.map(p => `${p.row}:${p.col}`));
+
+        // Add missing side / top / bottom round buttons
+        for (let row = 0; row < 10; row++) {
+          for (let col = 0; col < 10; col++) {
+            const shape = padShapeAt(row, col);
+            if (!shape || shape !== 'round') continue;
+            if (existing.has(`${row}:${col}`)) continue;
+
+            let note: number;
+            if (row === 0) note = 90 + col;
+            else if (row === 9) note = col;
+            else {
+              const launchpadRow = 9 - row;
+              note = launchpadRow * 10 + col;
+            }
+
+            const defaultLabel = PRO_MK2_BUTTON_LABELS[note] || '';
+
+            layer.pads.push({
+              id: uuid(),
+              row,
+              col,
+              midiNote: note,
+              label: defaultLabel,
+              padShape: 'round',
+              triggerType: 'momentary',
+              triggers: [],
+              ledDefault: { ...DEFAULT_LED },
+              ledActive: { ...ACTIVE_LED },
+              enabled: true,
+            });
+          }
+        }
+
+        migrated = true;
+      }
+    }
+
+    return migrated ? { ...profile, updatedAt: new Date().toISOString() } : profile;
+  }
+
   private createDefaultProfile(): Profile {
     const layer = this.createDefaultLayer();
     return {
@@ -275,15 +348,36 @@ export class ProfileManager extends EventEmitter {
   private createDefaultLayer(name = 'Layer 1'): Layer {
     const pads: PadConfig[] = [];
 
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const note = (7 - row) * 10 + col + 11;
+    /**
+     * Build a full 10×10 grid matching the Launchpad Pro MK2 programmer-mode layout.
+     * Row 0 = top round buttons (notes 91-98, corner cols 0 & 9 empty)
+     * Rows 1-8 = left-round + 8 main pads + right-round  (note = launchpadRow*10+col)
+     * Row 9 = bottom round buttons (notes 1-8, corner cols 0 & 9 empty)
+     */
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < 10; col++) {
+        const shape = padShapeAt(row, col);
+        if (!shape) continue; // skip corners
+
+        let note: number;
+        if (row === 0) {
+          note = 90 + col; // 91-98
+        } else if (row === 9) {
+          note = col;       // 1-8
+        } else {
+          const launchpadRow = 9 - row;
+          note = launchpadRow * 10 + col;
+        }
+
+        const defaultLabel = PRO_MK2_BUTTON_LABELS[note] || '';
+
         pads.push({
           id: uuid(),
           row,
           col,
           midiNote: note,
-          label: '',
+          label: shape === 'round' ? defaultLabel : '',
+          padShape: shape,
           triggerType: 'momentary',
           triggers: [],
           ledDefault: { ...DEFAULT_LED },

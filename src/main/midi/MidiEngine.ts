@@ -274,7 +274,10 @@ export class MidiEngine extends EventEmitter {
 
     for (let row = 0; row < descriptor.gridRows; row++) {
       for (let col = 0; col < descriptor.gridCols; col++) {
-        this.setLed(deviceId, descriptor.noteMap[row][col], { r: 0, g: 0, b: 0 });
+        const note = descriptor.noteMap[row][col];
+        if (note >= 0) {
+          this.setLed(deviceId, note, { r: 0, g: 0, b: 0 });
+        }
       }
     }
   }

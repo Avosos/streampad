@@ -194,13 +194,18 @@ export interface PadTriggerConfig {
   actions: Action[];
 }
 
+export type PadShape = 'square' | 'round';
+
 export interface PadConfig {
   id: string;
-  row: number;           // 0-7
-  col: number;           // 0-7
-  midiNote: number;      // MIDI note mapped to this pad
+  row: number;           // 0-9 (10x10 grid including side buttons)
+  col: number;           // 0-9
+  midiNote: number;      // MIDI note mapped to this pad (-1 if CC)
+  midiCC?: number;       // CC number for top-row buttons
   label: string;
-  icon?: string;         // icon identifier or base64
+  icon?: string;         // emoji or icon name
+  image?: string;        // file path or data URL for custom image
+  padShape?: PadShape;   // visual shape: square for main grid, round for side buttons (optional for migration)
   triggerType: TriggerType;
   triggers: PadTriggerConfig[];
   ledDefault: LedState;
@@ -287,14 +292,13 @@ export type LaunchpadModel =
 export interface DeviceDescriptor {
   model: LaunchpadModel;
   name: string;
-  gridRows: number;
-  gridCols: number;
+  gridRows: number;          // 10 (full layout with side buttons)
+  gridCols: number;          // 10
   hasVelocity: boolean;
   hasAftertouch: boolean;
   hasPressure: boolean;
-  noteMap: number[][];      // [row][col] → MIDI note
-  ccMap?: number[];          // function buttons CC numbers
-  sysexHeader: number[];    // SysEx manufacturer/device prefix
+  noteMap: number[][];       // [row][col] → MIDI note (-1 = empty corner)
+  sysexHeader: number[];     // SysEx manufacturer/device prefix
 }
 
 // --------------- App State ---------------

@@ -30,6 +30,11 @@ function padColorToGlow(color: PadColor): string {
 // Clipboard for copy/paste
 let clipboardPad: PadConfig | null = null;
 
+/** Is this grid position an empty corner? */
+function isCorner(row: number, col: number): boolean {
+  return (row === 0 || row === 9) && (col === 0 || col === 9);
+}
+
 export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, onPadUpdate }: PadGridProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -65,6 +70,7 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
         ...contextMenu.pad,
         label: clipboardPad.label,
         icon: clipboardPad.icon,
+        image: clipboardPad.image,
         triggers: JSON.parse(JSON.stringify(clipboardPad.triggers)),
         ledDefault: { ...clipboardPad.ledDefault },
         ledActive: { ...clipboardPad.ledActive },
@@ -80,6 +86,7 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
         ...contextMenu.pad,
         label: '',
         icon: '',
+        image: '',
         triggers: [],
         ledDefault: { color: { r: 0, g: 0, b: 0 }, brightness: 0 },
         ledActive: { color: { r: 60, g: 60, b: 60 }, brightness: 0.5 },
@@ -97,19 +104,49 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
     );
   }
 
-  // Build 8x8 grid
-  const grid: (PadConfig | null)[][] = Array.from({ length: 8 }, () => Array(8).fill(null));
+  // Build 10×10 grid (includes side/top/bottom buttons)
+  const grid: (PadConfig | null)[][] = Array.from({ length: 10 }, () => Array(10).fill(null));
   for (const pad of layer.pads) {
-    if (pad.row >= 0 && pad.row < 8 && pad.col >= 0 && pad.col < 8) {
+    if (pad.row >= 0 && pad.row < 10 && pad.col >= 0 && pad.col < 10) {
       grid[pad.row][pad.col] = pad;
     }
   }
 
+  const renderPadContent = (pad: PadConfig) => {
+    const hasAction = pad.triggers.length > 0;
+
+    // Image takes priority
+    if (pad.image) {
+      return <img className="pad-image" src={pad.image} alt={pad.label || ''} draggable={false} />;
+    }
+    // Then icon (emoji or icon name)
+    if (pad.icon) {
+      return <span className="pad-icon">{pad.icon}</span>;
+    }
+    // Then text label
+    if (pad.label) {
+      return <span className="pad-label">{pad.label}</span>;
+    }
+    // Configured dot
+    if (hasAction) {
+      return <span className="pad-dot" />;
+    }
+    return null;
+  };
+
   return (
     <div className="padgrid">
       {grid.map((row, rowIdx) => (
-        <div key={rowIdx} className="padgrid-row">
+        <div
+          key={rowIdx}
+          className={`padgrid-row ${rowIdx === 0 ? 'padgrid-row-top' : ''} ${rowIdx === 9 ? 'padgrid-row-bottom' : ''}`}
+        >
           {row.map((pad, colIdx) => {
+            // Empty corners
+            if (isCorner(rowIdx, colIdx)) {
+              return <div key={colIdx} className="pad-corner" />;
+            }
+
             if (!pad) {
               return <div key={colIdx} className="pad pad-empty" />;
             }
@@ -120,24 +157,30 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
             const bgColor = padColorToCSS(ledState.color, ledState.brightness);
             const glowColor = padColorToGlow(ledState.color);
             const hasAction = pad.triggers.length > 0;
+            const isRound = pad.padShape === 'round'
+              || (!pad.padShape && (pad.row === 0 || pad.row === 9 || pad.col === 0 || pad.col === 9));
 
             return (
               <button
                 key={colIdx}
-                className={`pad ${isActive ? 'pad-active' : ''} ${isSelected ? 'pad-selected' : ''} ${hasAction ? 'pad-configured' : ''}`}
+                className={[
+                  'pad',
+                  isRound ? 'pad-round' : '',
+                  isActive ? 'pad-active' : '',
+                  isSelected ? 'pad-selected' : '',
+                  hasAction ? 'pad-configured' : '',
+                  colIdx === 0 ? 'pad-side-left' : '',
+                  colIdx === 9 ? 'pad-side-right' : '',
+                ].filter(Boolean).join(' ')}
                 style={{
                   '--pad-color': bgColor,
                   '--pad-glow': glowColor,
                 } as React.CSSProperties}
                 onClick={() => onPadSelect(pad)}
                 onContextMenu={(e) => handleContextMenu(e, pad)}
-                title={pad.label || `Pad ${pad.row + 1}×${pad.col + 1} (Note ${pad.midiNote})`}
+                title={pad.label || `Pad ${pad.row}×${pad.col} (Note ${pad.midiNote})`}
               >
-                {pad.label && <span className="pad-label">{pad.label}</span>}
-                {pad.icon && <span className="pad-icon">{pad.icon}</span>}
-                {!pad.label && !pad.icon && hasAction && (
-                  <span className="pad-dot" />
-                )}
+                {renderPadContent(pad)}
               </button>
             );
           })}
