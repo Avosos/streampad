@@ -280,15 +280,83 @@ export class MidiEngine extends EventEmitter {
   }
 
   /**
-   * Send SysEx to enter Programmer mode (Launchpad Pro MK2).
+   * Build the correct Programmer-mode SysEx for a given Launchpad model.
+   * Returns null for unsupported / unknown models.
+   */
+  private buildProgrammerModeSysex(model: LaunchpadModel): number[] | null {
+    const descriptor = DEVICE_DESCRIPTORS[model];
+    if (!descriptor || descriptor.sysexHeader.length === 0) return null;
+
+    switch (model) {
+      // Pro MK2: F0 00 20 29 02 10 21 01 F7
+      case 'launchpad_pro_mk2':
+        return [0xf0, ...descriptor.sysexHeader, 0x21, 0x01, 0xf7];
+
+      // Pro MK3: F0 00 20 29 02 0E 0E 01 F7
+      case 'launchpad_pro_mk3':
+        return [0xf0, ...descriptor.sysexHeader, 0x0e, 0x01, 0xf7];
+
+      // Launchpad X: F0 00 20 29 02 0C 0E 01 F7
+      case 'launchpad_x':
+        return [0xf0, ...descriptor.sysexHeader, 0x0e, 0x01, 0xf7];
+
+      // Mini MK3: F0 00 20 29 02 0D 0E 01 F7
+      case 'launchpad_mini_mk3':
+        return [0xf0, ...descriptor.sysexHeader, 0x0e, 0x01, 0xf7];
+
+      // Launchpad MK2: F0 00 20 29 02 18 22 00 F7  (User-1 layout)
+      case 'launchpad_mk2':
+        return [0xf0, ...descriptor.sysexHeader, 0x22, 0x00, 0xf7];
+
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Send SysEx to enter Programmer mode for a specific device.
+   * Automatically detects the model and sends the correct message.
    */
   enterProgrammerMode(deviceId: string): void {
     const output = this.outputs.get(deviceId);
-    if (!output) return;
+    if (!output) {
+      console.warn(`[MidiEngine] No output port for device ${deviceId}, skipping programmer mode`);
+      return;
+    }
 
-    // Programmer mode SysEx for Pro MK2: F0 00 20 29 02 10 21 01 F7
-    output.jzzPort.send([0xf0, 0x00, 0x20, 0x29, 0x02, 0x10, 0x21, 0x01, 0xf7]);
-    console.log(`[MidiEngine] Entered Programmer mode for device ${deviceId}`);
+    const device = this.devices.get(deviceId);
+    if (!device) return;
+
+    const model = detectModel(device.name);
+    const sysex = this.buildProgrammerModeSysex(model);
+
+    if (!sysex) {
+      console.warn(`[MidiEngine] No programmer-mode SysEx for model '${model}' (${device.name})`);
+      return;
+    }
+
+    output.jzzPort.send(sysex);
+    console.log(`[MidiEngine] Sent programmer-mode SysEx for ${model} on port "${output.name}"`);
+  }
+
+  /**
+   * Send Programmer-mode SysEx to ALL Launchpad output ports.
+   * Useful because some models only respond on a specific port.
+   */
+  enterProgrammerModeAll(): void {
+    for (const [deviceId, output] of this.outputs) {
+      const device = this.devices.get(deviceId);
+      if (!device) continue;
+
+      const model = detectModel(device.name);
+      if (model === 'unknown') continue;
+
+      const sysex = this.buildProgrammerModeSysex(model);
+      if (!sysex) continue;
+
+      output.jzzPort.send(sysex);
+      console.log(`[MidiEngine] Sent programmer-mode SysEx for ${model} on port "${output.name}"`);
+    }
   }
 
   /**

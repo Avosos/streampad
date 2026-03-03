@@ -119,9 +119,19 @@ export const DEVICE_DESCRIPTORS: Record<LaunchpadModel, DeviceDescriptor> = {
 
 /**
  * Detect Launchpad model from MIDI device name string.
+ * Windows may wrap the name in "MIDIINx (...)" or append a number,
+ * so we strip those before matching.
  */
 export function detectModel(deviceName: string): LaunchpadModel {
-  const name = deviceName.toLowerCase();
+  let name = deviceName.toLowerCase();
+
+  // Strip Windows "MIDIINx (...)" / "MIDIOUTx (...)" wrapper
+  const wrapped = name.match(/^midi(?:in|out)\d*\s*\((.+)\)$/);
+  if (wrapped) name = wrapped[1].trim();
+
+  // Strip trailing Windows port numbers, e.g. "launchpad pro 2" → "launchpad pro"
+  name = name.replace(/\s+\d+$/, '');
+
   if (name.includes('launchpad pro') && name.includes('mk3')) return 'launchpad_pro_mk3';
   if (name.includes('launchpad pro')) return 'launchpad_pro_mk2';
   if (name.includes('launchpad x')) return 'launchpad_x';

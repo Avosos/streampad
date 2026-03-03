@@ -79,11 +79,12 @@ export class AppController {
     // Handle device connect/disconnect
     this.midiEngine.on('device:connected', (device) => {
       console.log(`[AppController] Device connected: ${device.name}`);
-      // Enter programmer mode for the device
+      // Enter programmer mode after a short delay so all ports are open,
+      // then send to ALL Launchpad outputs for maximum reliability.
       setTimeout(() => {
-        this.midiEngine.enterProgrammerMode(device.id);
-        this.refreshLeds(device.id);
-      }, 500);
+        this.midiEngine.enterProgrammerModeAll();
+        this.refreshLeds();
+      }, 800);
     });
 
     this.midiEngine.on('device:disconnected', (device) => {
