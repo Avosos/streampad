@@ -130,7 +130,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
     return (
       <div className="sidebar sidebar-empty">
         <div className="sidebar-placeholder">
-          <p>Select a pad to configure</p>
+          <p>Press a pad on your Launchpad<br />or click one in the grid</p>
         </div>
       </div>
     );

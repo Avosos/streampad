@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import PadGrid from './components/PadGrid';
 import Sidebar from './components/Sidebar';
@@ -27,6 +27,10 @@ export default function App() {
   const [activePads, setActivePads] = useState<Set<number>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [showCalibration, setShowCalibration] = useState(false);
+
+  // Ref to activeLayer so the MIDI listener always has the latest layer
+  const activeLayerRef = useRef<Layer | null>(null);
+  activeLayerRef.current = activeLayer;
 
   // ─── Apply theme from settings ─────────────────────────
   const applyTheme = useCallback((theme: string) => {
@@ -74,7 +78,7 @@ export default function App() {
     init();
   }, []);
 
-  // ─── Listen for MIDI events (visual feedback in GUI) ───
+  // ─── Listen for MIDI events (visual feedback + pad selection) ───
   useEffect(() => {
     const unsubs: Array<() => void> = [];
 
@@ -82,6 +86,15 @@ export default function App() {
       api.midi.onMessage((_deviceId: string, msg: MidiMessage) => {
         if (msg.type === 'noteon' && msg.velocity > 0) {
           setActivePads((prev) => new Set(prev).add(msg.note));
+
+          // Select the corresponding pad in the sidebar for configuration
+          const layer = activeLayerRef.current;
+          if (layer) {
+            const pad = layer.pads.find((p) => p.midiNote === msg.note);
+            if (pad) {
+              setSelectedPad(pad);
+            }
+          }
         } else if (msg.type === 'noteoff' || (msg.type === 'noteon' && msg.velocity === 0)) {
           setActivePads((prev) => {
             const next = new Set(prev);
