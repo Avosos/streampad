@@ -33,7 +33,16 @@ export class MidiEngine extends EventEmitter {
   }
 
   /**
+   * Check if a MIDI port name belongs to a Launchpad.
+   */
+  private isLaunchpadPort(name: string): boolean {
+    const lower = name.toLowerCase();
+    return lower.includes('launchpad');
+  }
+
+  /**
    * Scan for connected MIDI devices and open Launchpad ports.
+   * Non-Launchpad outputs (e.g. Microsoft GS Wavetable Synth) are ignored.
    */
   async scanDevices(): Promise<MidiDeviceInfo[]> {
     if (!this._jzz) return [];
@@ -41,9 +50,11 @@ export class MidiEngine extends EventEmitter {
     const info = this._jzz.info();
     const currentDeviceNames = new Set<string>();
 
-    // Process inputs
+    // Process inputs – only open Launchpad inputs
     for (const inp of info.inputs) {
       const name: string = inp.name;
+      if (!this.isLaunchpadPort(name)) continue;
+
       currentDeviceNames.add(name);
 
       if (!this.findDeviceByName(name)) {
@@ -62,9 +73,11 @@ export class MidiEngine extends EventEmitter {
       }
     }
 
-    // Process outputs
+    // Process outputs – only open Launchpad outputs
     for (const out of info.outputs) {
       const name: string = out.name;
+      if (!this.isLaunchpadPort(name)) continue;
+
       currentDeviceNames.add(name);
 
       const existing = this.findDeviceByName(name);
@@ -343,10 +356,14 @@ export class MidiEngine extends EventEmitter {
   }
 
   /**
-   * Send Programmer-mode SysEx to ALL Launchpad output ports.
-   * Useful because some models only respond on a specific port.
+   * Send Programmer-mode SysEx to the FIRST Launchpad output port only.
+   * The Launchpad Pro MK2 responds on port 1 ("Launchpad Pro"), not MIDIOUT2/3.
    */
   enterProgrammerModeAll(): void {
+    // Find the primary Launchpad output (the one without MIDIOUTx wrapper)
+    let primaryOutput: MidiPort | null = null;
+    let primaryModel: LaunchpadModel = 'unknown';
+
     for (const [deviceId, output] of this.outputs) {
       const device = this.devices.get(deviceId);
       if (!device) continue;
@@ -354,11 +371,22 @@ export class MidiEngine extends EventEmitter {
       const model = detectModel(device.name);
       if (model === 'unknown') continue;
 
-      const sysex = this.buildProgrammerModeSysex(model);
-      if (!sysex) continue;
+      // Prefer the port that is NOT wrapped in MIDIOUT2/3
+      const isWrapped = /^midiout\d/i.test(output.name);
+      if (!primaryOutput || !isWrapped) {
+        primaryOutput = output;
+        primaryModel = model;
+      }
+      // If we found a non-wrapped port, stop looking
+      if (!isWrapped) break;
+    }
 
-      output.jzzPort.send(sysex);
-      console.log(`[MidiEngine] Sent programmer-mode SysEx for ${model} on port "${output.name}"`);
+    if (primaryOutput && primaryModel !== 'unknown') {
+      const sysex = this.buildProgrammerModeSysex(primaryModel);
+      if (sysex) {
+        primaryOutput.jzzPort.send(sysex);
+        console.log(`[MidiEngine] Sent programmer-mode SysEx for ${primaryModel} on port "${primaryOutput.name}"`);
+      }
     }
   }
 

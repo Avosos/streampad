@@ -1,47 +1,38 @@
 /* ============================================
    StreamPad – Pad Grid (10×10 Launchpad layout)
-   Includes 8×8 main grid + 4×8 side/top/bottom
-   round buttons with empty corners.
+   CSS Grid for perfect row/col alignment.
+   8×8 main square pads + 4×8 side round buttons
+   with empty corners.
    ============================================ */
 
 .padgrid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 0.52fr repeat(8, 1fr) 0.52fr;
+  grid-template-rows: 0.52fr repeat(8, 1fr) 0.52fr;
   gap: var(--pad-gap);
   padding: 14px;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-default);
   box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.02);
-  /* keep it square-ish but allow slight stretch for the extra rows */
-  aspect-ratio: 10 / 10;
+  aspect-ratio: 1;
   height: 100%;
   max-height: 100%;
   max-width: 100%;
 }
 
+/* Row wrappers become transparent to the grid */
 .padgrid-row {
-  display: flex;
-  gap: var(--pad-gap);
-  flex: 1;
-}
-
-/* Top and bottom round-button rows are slightly shorter */
-.padgrid-row-top,
-.padgrid-row-bottom {
-  flex: 0.55;
+  display: contents;
 }
 
 /* ── Empty corner cells ─────────────────────── */
 .pad-corner {
-  flex: 1;
   pointer-events: none;
 }
 
 /* ── Individual Pad ─────────────────────────── */
 .pad {
-  flex: 1;
-  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,15 +41,18 @@
   border: 1.5px solid var(--border-subtle);
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--pad-text, rgba(255, 255, 255, 0.9));
   position: relative;
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast),
     border-color var(--transition-fast);
   overflow: hidden;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px var(--pad-text-shadow, rgba(0, 0, 0, 0.5));
   min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* ── Round side / top / bottom buttons ──────── */
@@ -67,12 +61,11 @@
   font-size: 8px;
   font-weight: 500;
   letter-spacing: -0.2px;
-}
-
-/* Side buttons slightly narrower to visually separate from main grid */
-.pad-side-left,
-.pad-side-right {
-  flex: 0.7;
+  aspect-ratio: 1;
+  justify-self: center;
+  align-self: center;
+  width: 78%;
+  height: auto;
 }
 
 .pad:hover {

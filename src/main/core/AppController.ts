@@ -76,15 +76,9 @@ export class AppController {
       this.handleInput(event.deviceId, event.note, event.event, event.value);
     });
 
-    // Handle device connect/disconnect
+    // Handle device connect/disconnect (logging only – no SysEx here)
     this.midiEngine.on('device:connected', (device) => {
       console.log(`[AppController] Device connected: ${device.name}`);
-      // Enter programmer mode after a short delay so all ports are open,
-      // then send to ALL Launchpad outputs for maximum reliability.
-      setTimeout(() => {
-        this.midiEngine.enterProgrammerModeAll();
-        this.refreshLeds();
-      }, 800);
     });
 
     this.midiEngine.on('device:disconnected', (device) => {
@@ -98,6 +92,12 @@ export class AppController {
     // Initialize MIDI engine last (starts scanning)
     await this.midiEngine.initialize();
     console.log('[AppController] MIDI engine initialized');
+
+    // Enter programmer mode ONCE after all ports are open
+    setTimeout(() => {
+      this.midiEngine.enterProgrammerModeAll();
+      this.refreshLeds();
+    }, 800);
 
     console.log('[AppController] Initialization complete');
   }

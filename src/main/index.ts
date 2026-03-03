@@ -14,6 +14,8 @@ const isDev = !app.isPackaged;
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
+  // Exit the Node process immediately to avoid reaching app.whenReady()
+  process.exit(0);
 } else {
   app.on('second-instance', () => {
     if (mainWindow) {
@@ -77,7 +79,6 @@ async function createWindow(): Promise<void> {
   // Load renderer
   if (isDev) {
     await mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     await mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   }

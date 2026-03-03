@@ -372,7 +372,7 @@ export const IPC_CHANNELS = {
 // --------------- App Settings ---------------
 
 export interface AppSettings {
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'grey';
   holdThresholdMs: number;
   multiPressWindowMs: number;
   autoConnect: boolean;
@@ -380,6 +380,7 @@ export interface AppSettings {
   minimizeToTray: boolean;
   lastDeviceId: string | null;
   pluginDir: string | null;
+  calibrated: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -391,4 +392,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   minimizeToTray: true,
   lastDeviceId: null,
   pluginDir: null,
+  calibrated: false,
 };

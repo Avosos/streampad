@@ -4,6 +4,7 @@ import PadGrid from './components/PadGrid';
 import Sidebar from './components/Sidebar';
 import DeviceBar from './components/DeviceBar';
 import Settings from './components/Settings';
+import CalibrationWizard from './components/CalibrationWizard';
 import { Profile, PadConfig, MidiDeviceInfo, Layer, MidiMessage, InputEvent } from '../shared/types';
 import './styles/app.css';
 
@@ -25,11 +26,35 @@ export default function App() {
   const [devices, setDevices] = useState<MidiDeviceInfo[]>([]);
   const [activePads, setActivePads] = useState<Set<number>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
+  const [showCalibration, setShowCalibration] = useState(false);
+
+  // ─── Apply theme from settings ─────────────────────────
+  const applyTheme = useCallback((theme: string) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    // Update background color for the title bar area
+    const bgMap: Record<string, string> = {
+      dark: '#0a0a10',
+      light: '#f5f5f8',
+      grey: '#2b2d31',
+    };
+    document.documentElement.style.setProperty('--bg-primary', bgMap[theme] || bgMap.dark);
+  }, []);
 
   // ─── Load initial state ────────────────────────────────
   useEffect(() => {
     async function init() {
       try {
+        // Load theme first to avoid flash
+        const settings = await api.settings.get();
+        if (settings?.theme) {
+          applyTheme(settings.theme);
+        }
+
+        // Check if calibration has been completed
+        if (!settings?.calibrated) {
+          setShowCalibration(true);
+        }
+
         const state = await api.app.getState();
         setDevices(state.devices || []);
         setProfiles(state.profiles || []);
@@ -171,6 +196,12 @@ export default function App() {
 
   return (
     <div className="app">
+      {showCalibration && (
+        <CalibrationWizard
+          devices={devices}
+          onComplete={() => setShowCalibration(false)}
+        />
+      )}
       <Header
         profiles={profiles}
         activeProfile={activeProfile}

@@ -139,7 +139,7 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
       {grid.map((row, rowIdx) => (
         <div
           key={rowIdx}
-          className={`padgrid-row ${rowIdx === 0 ? 'padgrid-row-top' : ''} ${rowIdx === 9 ? 'padgrid-row-bottom' : ''}`}
+          className="padgrid-row"
         >
           {row.map((pad, colIdx) => {
             // Empty corners
@@ -169,8 +169,6 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
                   isActive ? 'pad-active' : '',
                   isSelected ? 'pad-selected' : '',
                   hasAction ? 'pad-configured' : '',
-                  colIdx === 0 ? 'pad-side-left' : '',
-                  colIdx === 9 ? 'pad-side-right' : '',
                 ].filter(Boolean).join(' ')}
                 style={{
                   '--pad-color': bgColor,

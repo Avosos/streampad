@@ -22,6 +22,10 @@ export default function Settings({ onClose }: SettingsProps) {
     const updated = { ...settings, [key]: value };
     setSettings(updated);
     await api.settings.set({ [key]: value });
+    // Apply theme immediately
+    if (key === 'theme') {
+      document.documentElement.setAttribute('data-theme', value as string);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
@@ -118,12 +122,32 @@ export default function Settings({ onClose }: SettingsProps) {
               Dark
             </button>
             <button
+              className={`btn btn-sm ${settings.theme === 'grey' ? 'btn-accent' : 'btn-ghost'}`}
+              onClick={() => update('theme', 'grey')}
+            >
+              Grey
+            </button>
+            <button
               className={`btn btn-sm ${settings.theme === 'light' ? 'btn-accent' : 'btn-ghost'}`}
               onClick={() => update('theme', 'light')}
             >
               Light
             </button>
           </div>
+        </div>
+
+        {/* Calibration */}
+        <div className="field" style={{ marginTop: 10 }}>
+          <label className="field-label">Calibration</label>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => update('calibrated', false)}
+          >
+            🎹 Recalibrate Pads
+          </button>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            Restarts the calibration wizard on next reload
+          </span>
         </div>
 
         {saved && (
