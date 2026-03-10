@@ -381,6 +381,7 @@ export interface AppSettings {
   lastDeviceId: string | null;
   pluginDir: string | null;
   calibrated: boolean;
+  language: 'en' | 'de';
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -393,4 +394,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   lastDeviceId: null,
   pluginDir: null,
   calibrated: false,
+  language: 'en',
 };
