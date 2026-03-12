@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MidiMessage, MidiDeviceInfo } from '../../shared/types';
+import { useLanguage } from '../hooks/useLanguage';
 import '../styles/calibration.css';
 
 const api = window.streampad;
@@ -33,6 +34,7 @@ function noteToGridPos(note: number): { row: number; col: number } | null {
  * on their physical Launchpad.
  */
 export default function CalibrationWizard({ onComplete, devices }: CalibrationWizardProps) {
+  const { t } = useLanguage();
   const [step, setStep] = useState<'welcome' | 'detect' | 'test' | 'done'>('welcome');
   const [pressedPads, setPressedPads] = useState<Set<number>>(new Set());
   const [lastNote, setLastNote] = useState<number | null>(null);
@@ -134,28 +136,27 @@ export default function CalibrationWizard({ onComplete, devices }: CalibrationWi
         {step === 'welcome' && (
           <>
             <div className="cal-icon">🎹</div>
-            <h2>Welcome to StreamPad</h2>
+            <h2>{t.calibration.welcome}</h2>
             <p className="cal-desc">
-              Let's make sure your Launchpad is connected and working correctly.
-              This quick setup will verify the pad mapping.
+              {t.calibration.welcomeDesc}
             </p>
             {connectedDevices.length > 0 ? (
               <div className="cal-device-info">
                 <span className="cal-device-dot connected" />
-                {connectedDevices[0].name} connected
+                {connectedDevices[0].name} {t.calibration.connected}
               </div>
             ) : (
               <div className="cal-device-info">
                 <span className="cal-device-dot" />
-                No device detected — connect your Launchpad
+                {t.calibration.noDevice}
               </div>
             )}
             <div className="cal-actions">
               <button className="btn btn-accent" onClick={() => setStep(connectedDevices.length > 0 ? 'test' : 'detect')}>
-                {connectedDevices.length > 0 ? 'Start Calibration' : 'Waiting for Device…'}
+                {connectedDevices.length > 0 ? t.calibration.startCalibration : t.calibration.waitingForDevice}
               </button>
               <button className="btn btn-ghost" onClick={handleSkip}>
-                Skip
+                {t.calibration.skip}
               </button>
             </div>
           </>
@@ -164,14 +165,14 @@ export default function CalibrationWizard({ onComplete, devices }: CalibrationWi
         {step === 'detect' && (
           <>
             <div className="cal-icon">🔍</div>
-            <h2>Detecting Device</h2>
+            <h2>{t.calibration.detectingDevice}</h2>
             <p className="cal-desc">
-              Press any pad on your Launchpad to confirm it's connected.
+              {t.calibration.detectingDeviceDesc}
             </p>
             <div className="cal-pulse" />
             <div className="cal-actions">
               <button className="btn btn-ghost" onClick={handleSkip}>
-                Skip
+                {t.calibration.skip}
               </button>
             </div>
           </>
@@ -179,18 +180,18 @@ export default function CalibrationWizard({ onComplete, devices }: CalibrationWi
 
         {step === 'test' && (
           <>
-            <h2>Test Your Pads</h2>
+            <h2>{t.calibration.testPads}</h2>
             <p className="cal-desc">
-              Press pads on your Launchpad. The corresponding grid cell should light up below.
+              {t.calibration.testPadsDesc}
               {lastPos && (
                 <span className="cal-last-info">
-                  {' '}Last: Note {lastNote} → Row {lastPos.row}, Col {lastPos.col}
+                  {' '}{t.calibration.lastNote.replace('{note}', String(lastNote)).replace('{row}', String(lastPos.row)).replace('{col}', String(lastPos.col))}
                 </span>
               )}
             </p>
             {renderGrid()}
             <div className="cal-stats">
-              {pressedPads.size} pad{pressedPads.size !== 1 ? 's' : ''} tested
+              {t.calibration.padsTested.replace('{n}', String(pressedPads.size))}
             </div>
             <div className="cal-actions">
               <button
@@ -198,10 +199,10 @@ export default function CalibrationWizard({ onComplete, devices }: CalibrationWi
                 onClick={() => setStep('done')}
                 disabled={pressedPads.size < 3}
               >
-                Looks Good!
+                {t.calibration.looksGood}
               </button>
               <button className="btn btn-ghost" onClick={handleSkip}>
-                Skip
+                {t.calibration.skip}
               </button>
             </div>
           </>
@@ -210,14 +211,13 @@ export default function CalibrationWizard({ onComplete, devices }: CalibrationWi
         {step === 'done' && (
           <>
             <div className="cal-icon">✅</div>
-            <h2>All Set!</h2>
+            <h2>{t.calibration.allSet}</h2>
             <p className="cal-desc">
-              Your Launchpad is calibrated and ready to go.
-              You tested {pressedPads.size} pad{pressedPads.size !== 1 ? 's' : ''} and everything looks correct.
+              {t.calibration.allSetDesc.replace('{n}', String(pressedPads.size))}
             </p>
             <div className="cal-actions">
               <button className="btn btn-accent" onClick={handleFinish}>
-                Start Using StreamPad
+                {t.calibration.startUsing}
               </button>
             </div>
           </>

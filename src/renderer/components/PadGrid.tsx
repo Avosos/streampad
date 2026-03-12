@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Layer, PadConfig, PadColor } from '../../shared/types';
+import { useLanguage } from '../hooks/useLanguage';
 import '../styles/padgrid.css';
 
 interface PadGridProps {
@@ -36,6 +37,7 @@ function isCorner(row: number, col: number): boolean {
 }
 
 export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, onPadUpdate }: PadGridProps) {
+  const { t } = useLanguage();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +101,7 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
   if (!layer) {
     return (
       <div className="padgrid-empty">
-        <p>No active profile. Create one to get started.</p>
+        <p>{t.padGrid.noActiveProfile}</p>
       </div>
     );
   }
@@ -176,7 +178,7 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
                 } as React.CSSProperties}
                 onClick={() => onPadSelect(pad)}
                 onContextMenu={(e) => handleContextMenu(e, pad)}
-                title={pad.label || `Pad ${pad.row}×${pad.col} (Note ${pad.midiNote})`}
+                title={pad.label || t.padGrid.padTooltip.replace('{row}', String(pad.row)).replace('{col}', String(pad.col)).replace('{note}', String(pad.midiNote))}
               >
                 {renderPadContent(pad)}
               </button>
@@ -193,18 +195,18 @@ export default function PadGrid({ layer, activePads, selectedPad, onPadSelect, o
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button className="context-menu-item" onClick={handleCopy}>
-            Copy
+            {t.padGrid.copy}
           </button>
           <button
             className="context-menu-item"
             onClick={handlePaste}
             disabled={!clipboardPad}
           >
-            Paste
+            {t.padGrid.paste}
           </button>
           <div className="context-menu-divider" />
           <button className="context-menu-item context-menu-danger" onClick={handleClear}>
-            Clear Pad
+            {t.padGrid.clearPad}
           </button>
         </div>
       )}

@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import DeviceBar from './components/DeviceBar';
 import Settings from './components/Settings';
 import CalibrationWizard from './components/CalibrationWizard';
+import { useLanguage } from './hooks/useLanguage';
 import { Profile, PadConfig, MidiDeviceInfo, Layer, MidiMessage, InputEvent } from '../shared/types';
 import './styles/app.css';
 
@@ -27,6 +28,8 @@ export default function App() {
   const [activePads, setActivePads] = useState<Set<number>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [showCalibration, setShowCalibration] = useState(false);
+
+  const { t } = useLanguage();
 
   // Ref to activeLayer so the MIDI listener always has the latest layer
   const activeLayerRef = useRef<Layer | null>(null);
@@ -253,7 +256,7 @@ export default function App() {
                   ))}
                   <button
                     className="layer-btn add"
-                    onClick={() => handleCreateLayer(`Layer ${activeProfile.layers.length + 1}`)}
+                    onClick={() => handleCreateLayer(t.app.layer.replace('{n}', String(activeProfile.layers.length + 1)))}
                   >
                     +
                   </button>

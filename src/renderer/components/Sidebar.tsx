@@ -27,6 +27,7 @@ import {
   Layer,
 } from '../../shared/types';
 import { v4 as uuid } from 'uuid';
+import { useLanguage } from '../hooks/useLanguage';
 import '../styles/sidebar.css';
 
 const api = window.streampad;
@@ -118,6 +119,7 @@ function createDefaultAction(type: ActionType): Action {
 }
 
 export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, activeProfile }: SidebarProps) {
+  const { t } = useLanguage();
   const [pad, setPad] = useState<PadConfig | null>(null);
   const [isRecordingHotkey, setIsRecordingHotkey] = useState<{ triggerIndex: number; actionIndex: number } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,11 +128,45 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
     setPad(selectedPad ? { ...selectedPad } : null);
   }, [selectedPad]);
 
+  const actionTypeLabels: Record<string, string> = {
+    keyboard_shortcut: t.sidebar.keyboardShortcut,
+    hotkey_sequence: t.sidebar.hotkeySequence,
+    launch_app: t.sidebar.launchApp,
+    system_command: t.sidebar.systemCommand,
+    http_request: t.sidebar.httpRequest,
+    websocket_message: t.sidebar.websocketMessage,
+    osc_message: t.sidebar.oscMessage,
+    plugin_action: t.sidebar.pluginAction,
+    profile_switch: t.sidebar.switchProfile,
+    layer_switch: t.sidebar.switchLayer,
+    delay: t.sidebar.delay,
+    multi_action: t.sidebar.multiAction,
+    play_audio: t.sidebar.playAudio,
+    media_key: t.sidebar.mediaKey,
+    open_folder: t.sidebar.openFolder,
+  };
+
+  const inputEventLabels: Record<string, string> = {
+    press: t.sidebar.press,
+    release: t.sidebar.release,
+    hold: t.sidebar.hold,
+    double_press: t.sidebar.doublePress,
+    triple_press: t.sidebar.triplePress,
+    velocity: t.sidebar.velocity,
+    aftertouch: t.sidebar.aftertouch,
+  };
+
+  const triggerTypeLabels: Record<string, string> = {
+    momentary: t.sidebar.momentary,
+    toggle: t.sidebar.toggle,
+    hold: t.sidebar.hold,
+  };
+
   if (!pad) {
     return (
       <div className="sidebar sidebar-empty">
         <div className="sidebar-placeholder">
-          <p>Press a pad on your Launchpad<br />or click one in the grid</p>
+          <p>{t.sidebar.pressAPad}</p>
         </div>
       </div>
     );
@@ -239,7 +275,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
 
   const browseFile = async (triggerIndex: number, actionIndex: number, field: string, filters?: any[]) => {
     const filePath = await api.dialog.openFile({
-      filters: filters || [{ name: 'All Files', extensions: ['*'] }],
+      filters: filters || [{ name: t.sidebar.allFiles, extensions: ['*'] }],
     });
     if (filePath) {
       updateAction(triggerIndex, actionIndex, { [field]: filePath } as any);
@@ -250,8 +286,8 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
     <div className="sidebar">
       <div className="sidebar-header">
         <h3>
-          {pad.padShape === 'round' ? '● ' : ''}Pad {pad.row}×{pad.col}
-          <span className="sidebar-note">Note {pad.midiNote}</span>
+          {pad.padShape === 'round' ? '● ' : ''}{t.sidebar.pad.replace('{row}', String(pad.row)).replace('{col}', String(pad.col))}
+          <span className="sidebar-note">{t.sidebar.note.replace('{note}', String(pad.midiNote))}</span>
         </h3>
         <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
       </div>
@@ -259,24 +295,24 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
       <div className="sidebar-content">
         {/* Label */}
         <div className="field">
-          <label className="field-label">Label</label>
+          <label className="field-label">{t.sidebar.label}</label>
           <input
             type="text"
             value={pad.label}
             onChange={(e) => updateField('label', e.target.value)}
-            placeholder="Button name..."
+            placeholder={t.sidebar.labelPlaceholder}
           />
         </div>
 
         {/* Icon (emoji or symbol) */}
         <div className="field">
-          <label className="field-label">Icon (emoji)</label>
+          <label className="field-label">{t.sidebar.iconEmoji}</label>
           <div className="action-fields">
             <input
               type="text"
               value={pad.icon || ''}
               onChange={(e) => updateField('icon', e.target.value)}
-              placeholder="e.g. 🎵 🔊 🌐 🎮 ..."
+              placeholder={t.sidebar.iconPlaceholder}
               style={{ flex: 1 }}
             />
             {pad.icon && (
@@ -298,27 +334,27 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
 
         {/* Image */}
         <div className="field">
-          <label className="field-label">Image</label>
+          <label className="field-label">{t.sidebar.image}</label>
           <div className="action-fields">
             <input
               type="text"
               value={pad.image || ''}
               onChange={(e) => updateField('image', e.target.value)}
-              placeholder="Image path or URL..."
+              placeholder={t.sidebar.imagePlaceholder}
               style={{ flex: 1 }}
             />
             <button className="btn btn-ghost btn-sm" onClick={async () => {
               const filePath = await api.dialog.openFile({
                 filters: [
-                  { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'] },
-                  { name: 'All Files', extensions: ['*'] },
+                  { name: t.sidebar.images, extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'] },
+                  { name: t.sidebar.allFiles, extensions: ['*'] },
                 ],
               });
               if (filePath) {
                 // Convert to file:// URL for the renderer
                 updateField('image', `file://${filePath.replace(/\\/g, '/')}`);
               }
-            }}>Browse</button>
+            }}>{t.sidebar.browse}</button>
             {pad.image && (
               <button className="btn btn-ghost btn-sm" onClick={() => updateField('image', '')}>✕</button>
             )}
@@ -332,15 +368,15 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
 
         {/* Trigger Type */}
         <div className="field">
-          <label className="field-label">Trigger Type</label>
+          <label className="field-label">{t.sidebar.triggerType}</label>
           <div className="btn-group">
-            {(['momentary', 'toggle', 'hold'] as TriggerType[]).map((t) => (
+            {(['momentary', 'toggle', 'hold'] as TriggerType[]).map((tt) => (
               <button
-                key={t}
-                className={`btn btn-sm ${pad.triggerType === t ? 'btn-accent' : 'btn-ghost'}`}
-                onClick={() => updateField('triggerType', t)}
+                key={tt}
+                className={`btn btn-sm ${pad.triggerType === tt ? 'btn-accent' : 'btn-ghost'}`}
+                onClick={() => updateField('triggerType', tt)}
               >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+                {triggerTypeLabels[tt]}
               </button>
             ))}
           </div>
@@ -349,7 +385,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
         {/* LED Colors */}
         <div className="field-group">
           <div className="field">
-            <label className="field-label">Default Color</label>
+            <label className="field-label">{t.sidebar.defaultColor}</label>
             <div className="color-row">
               <input
                 type="color"
@@ -362,22 +398,22 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                 max="100"
                 value={Math.round(pad.ledDefault.brightness * 100)}
                 onChange={(e) => updateLedBrightness('ledDefault', parseInt(e.target.value) / 100)}
-                title={`Brightness: ${Math.round(pad.ledDefault.brightness * 100)}%`}
+                title={t.sidebar.brightness.replace('{n}', String(Math.round(pad.ledDefault.brightness * 100)))}
               />
               <select
                 value={pad.ledDefault.animation || 'none'}
                 onChange={(e) => updateLedAnimation('ledDefault', e.target.value)}
               >
-                <option value="none">None</option>
-                <option value="pulse">Pulse</option>
-                <option value="flash">Flash</option>
-                <option value="rainbow">Rainbow</option>
+                <option value="none">{t.sidebar.none}</option>
+                <option value="pulse">{t.sidebar.pulse}</option>
+                <option value="flash">{t.sidebar.flash}</option>
+                <option value="rainbow">{t.sidebar.rainbow}</option>
               </select>
             </div>
           </div>
 
           <div className="field">
-            <label className="field-label">Active Color</label>
+            <label className="field-label">{t.sidebar.activeColor}</label>
             <div className="color-row">
               <input
                 type="color"
@@ -390,16 +426,16 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                 max="100"
                 value={Math.round(pad.ledActive.brightness * 100)}
                 onChange={(e) => updateLedBrightness('ledActive', parseInt(e.target.value) / 100)}
-                title={`Brightness: ${Math.round(pad.ledActive.brightness * 100)}%`}
+                title={t.sidebar.brightness.replace('{n}', String(Math.round(pad.ledActive.brightness * 100)))}
               />
               <select
                 value={pad.ledActive.animation || 'none'}
                 onChange={(e) => updateLedAnimation('ledActive', e.target.value)}
               >
-                <option value="none">None</option>
-                <option value="pulse">Pulse</option>
-                <option value="flash">Flash</option>
-                <option value="rainbow">Rainbow</option>
+                <option value="none">{t.sidebar.none}</option>
+                <option value="pulse">{t.sidebar.pulse}</option>
+                <option value="flash">{t.sidebar.flash}</option>
+                <option value="rainbow">{t.sidebar.rainbow}</option>
               </select>
             </div>
           </div>
@@ -408,7 +444,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
         {/* Triggers & Actions */}
         <div className="field">
           <div className="field-header">
-            <label className="field-label">Triggers & Actions</label>
+            <label className="field-label">{t.sidebar.triggersAndActions}</label>
             <select
               className="add-trigger-select"
               value=""
@@ -419,10 +455,10 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                 }
               }}
             >
-              <option value="">+ Add Trigger...</option>
+              <option value="">{t.sidebar.addTrigger}</option>
               {INPUT_EVENTS.map((ie) => (
                 <option key={ie.value} value={ie.value}>
-                  {ie.label}
+                  {inputEventLabels[ie.value]}
                 </option>
               ))}
             </select>
@@ -431,7 +467,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
           {pad.triggers.map((trigger, tIdx) => (
             <div key={tIdx} className="trigger-block">
               <div className="trigger-header">
-                <span className="trigger-event">{trigger.event.replace('_', ' ')}</span>
+                <span className="trigger-event">{inputEventLabels[trigger.event] || trigger.event.replace('_', ' ')}</span>
                 <button
                   className="btn btn-danger btn-sm"
                   onClick={() => removeTrigger(tIdx)}
@@ -443,11 +479,11 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
               {trigger.actions.map((action, aIdx) => (
                 <div key={aIdx} className="action-block">
                   <div className="action-header">
-                    <span className="action-type">{ACTION_TYPES.find((a) => a.value === action.type)?.label}</span>
+                    <span className="action-type">{actionTypeLabels[action.type]}</span>
                     <div className="action-controls">
-                      <button className="btn btn-ghost btn-sm" onClick={() => moveAction(tIdx, aIdx, 'up')} disabled={aIdx === 0} title="Move up">↑</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => moveAction(tIdx, aIdx, 'down')} disabled={aIdx === trigger.actions.length - 1} title="Move down">↓</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => duplicateAction(tIdx, aIdx)} title="Duplicate">⧉</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => moveAction(tIdx, aIdx, 'up')} disabled={aIdx === 0} title={t.sidebar.moveUp}>↑</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => moveAction(tIdx, aIdx, 'down')} disabled={aIdx === trigger.actions.length - 1} title={t.sidebar.moveDown}>↓</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => duplicateAction(tIdx, aIdx)} title={t.sidebar.duplicate}>⧉</button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => removeActionFromTrigger(tIdx, aIdx)}
@@ -462,7 +498,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                     <div className="action-fields">
                       <input
                         type="text"
-                        placeholder="e.g. ctrl+shift+a"
+                        placeholder={t.sidebar.keyComboPlaceholder}
                         value={(action as any).keys?.join('+') || ''}
                         onChange={(e) =>
                           updateAction(tIdx, aIdx, {
@@ -475,7 +511,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                         className={`btn btn-sm ${isRecordingHotkey?.triggerIndex === tIdx && isRecordingHotkey?.actionIndex === aIdx ? 'btn-accent' : 'btn-ghost'}`}
                         onClick={() => startHotkeyRecording(tIdx, aIdx)}
                       >
-                        {isRecordingHotkey?.triggerIndex === tIdx && isRecordingHotkey?.actionIndex === aIdx ? '⏺ Recording...' : '⌨ Record'}
+                        {isRecordingHotkey?.triggerIndex === tIdx && isRecordingHotkey?.actionIndex === aIdx ? t.sidebar.recording : t.sidebar.record}
                       </button>
                     </div>
                   )}
@@ -487,7 +523,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                         <div key={sIdx} className="action-fields">
                           <input
                             type="text"
-                            placeholder="e.g. ctrl+c"
+                            placeholder={t.sidebar.keyComboPlaceholder}
                             value={step.keys.join('+')}
                             onChange={(e) => {
                               const seq = [...(action as HotkeySequenceAction).sequence];
@@ -497,7 +533,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                           />
                           <input
                             type="number"
-                            placeholder="Delay"
+                            placeholder={t.sidebar.delayLabel}
                             value={step.delayMs}
                             onChange={(e) => {
                               const seq = [...(action as HotkeySequenceAction).sequence];
@@ -506,7 +542,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                             }}
                             style={{ width: 70 }}
                           />
-                          <span className="field-unit">ms</span>
+                          <span className="field-unit">{t.sidebar.ms}</span>
                           <button className="btn btn-danger btn-sm" onClick={() => {
                             const seq = (action as HotkeySequenceAction).sequence.filter((_, i) => i !== sIdx);
                             updateAction(tIdx, aIdx, { sequence: seq } as any);
@@ -516,7 +552,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       <button className="btn btn-ghost btn-sm" onClick={() => {
                         const seq = [...((action as HotkeySequenceAction).sequence || []), { keys: [], delayMs: 100 }];
                         updateAction(tIdx, aIdx, { sequence: seq } as any);
-                      }}>+ Add Step</button>
+                      }}>{t.sidebar.addStep}</button>
                     </div>
                   )}
 
@@ -525,14 +561,14 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                     <div className="action-fields">
                       <input
                         type="text"
-                        placeholder="Application path..."
+                        placeholder={t.sidebar.appPathPlaceholder}
                         value={(action as any).path || ''}
                         onChange={(e) => updateAction(tIdx, aIdx, { path: e.target.value } as any)}
                       />
                       <button className="btn btn-ghost btn-sm" onClick={() => browseFile(tIdx, aIdx, 'path', [
-                        { name: 'Executables', extensions: ['exe', 'app', 'sh', 'bat', 'cmd'] },
-                        { name: 'All Files', extensions: ['*'] },
-                      ])}>Browse</button>
+                        { name: t.sidebar.executables, extensions: ['exe', 'app', 'sh', 'bat', 'cmd'] },
+                        { name: t.sidebar.allFiles, extensions: ['*'] },
+                      ])}>{t.sidebar.browse}</button>
                     </div>
                   )}
 
@@ -540,7 +576,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                   {action.type === 'system_command' && (
                     <input
                       type="text"
-                      placeholder="Command..."
+                      placeholder={t.sidebar.commandPlaceholder}
                       value={(action as any).command || ''}
                       onChange={(e) => updateAction(tIdx, aIdx, { command: e.target.value } as any)}
                     />
@@ -562,14 +598,14 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                         </select>
                         <input
                           type="text"
-                          placeholder="URL..."
+                          placeholder={t.sidebar.urlPlaceholder}
                           value={(action as any).url || ''}
                           onChange={(e) => updateAction(tIdx, aIdx, { url: e.target.value } as any)}
                         />
                       </div>
                       <input
                         type="text"
-                        placeholder='Body (JSON)...'
+                        placeholder={t.sidebar.bodyJsonPlaceholder}
                         value={(action as any).body || ''}
                         onChange={(e) => updateAction(tIdx, aIdx, { body: e.target.value } as any)}
                       />
@@ -581,13 +617,13 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                     <div className="action-fields-vertical">
                       <input
                         type="text"
-                        placeholder="ws://host:port"
+                        placeholder={t.sidebar.wsPlaceholder}
                         value={(action as WebSocketMessageAction).url || ''}
                         onChange={(e) => updateAction(tIdx, aIdx, { url: e.target.value } as any)}
                       />
                       <input
                         type="text"
-                        placeholder="Message payload..."
+                        placeholder={t.sidebar.messagePayloadPlaceholder}
                         value={(action as WebSocketMessageAction).message || ''}
                         onChange={(e) => updateAction(tIdx, aIdx, { message: e.target.value } as any)}
                       />
@@ -600,14 +636,14 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       <div className="action-fields">
                         <input
                           type="text"
-                          placeholder="Host"
+                          placeholder={t.sidebar.host}
                           value={(action as OscMessageAction).host || '127.0.0.1'}
                           onChange={(e) => updateAction(tIdx, aIdx, { host: e.target.value } as any)}
                           style={{ flex: 2 }}
                         />
                         <input
                           type="number"
-                          placeholder="Port"
+                          placeholder={t.sidebar.port}
                           value={(action as OscMessageAction).port || 8000}
                           onChange={(e) => updateAction(tIdx, aIdx, { port: parseInt(e.target.value) || 8000 } as any)}
                           style={{ width: 80 }}
@@ -615,7 +651,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       </div>
                       <input
                         type="text"
-                        placeholder="/osc/address"
+                        placeholder={t.sidebar.oscAddressPlaceholder}
                         value={(action as OscMessageAction).address || ''}
                         onChange={(e) => updateAction(tIdx, aIdx, { address: e.target.value } as any)}
                       />
@@ -627,13 +663,13 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                     <div className="action-fields-vertical">
                       <input
                         type="text"
-                        placeholder="Plugin ID..."
+                        placeholder={t.sidebar.pluginIdPlaceholder}
                         value={(action as PluginActionDef).pluginId || ''}
                         onChange={(e) => updateAction(tIdx, aIdx, { pluginId: e.target.value } as any)}
                       />
                       <input
                         type="text"
-                        placeholder="Action ID..."
+                        placeholder={t.sidebar.actionIdPlaceholder}
                         value={(action as PluginActionDef).actionId || ''}
                         onChange={(e) => updateAction(tIdx, aIdx, { actionId: e.target.value } as any)}
                       />
@@ -646,7 +682,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       value={(action as ProfileSwitchAction).profileId || ''}
                       onChange={(e) => updateAction(tIdx, aIdx, { profileId: e.target.value } as any)}
                     >
-                      <option value="">Select profile...</option>
+                      <option value="">{t.sidebar.selectProfile}</option>
                       {(profiles || []).map((p) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
@@ -659,7 +695,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       value={(action as LayerSwitchAction).layerId || ''}
                       onChange={(e) => updateAction(tIdx, aIdx, { layerId: e.target.value } as any)}
                     >
-                      <option value="">Select layer...</option>
+                      <option value="">{t.sidebar.selectLayer}</option>
                       {(activeProfile?.layers || []).map((l) => (
                         <option key={l.id} value={l.id}>{l.name}</option>
                       ))}
@@ -671,13 +707,13 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                     <div className="action-fields">
                       <input
                         type="number"
-                        placeholder="Delay (ms)"
+                        placeholder={t.sidebar.delayMs}
                         value={(action as any).delayMs || 100}
                         onChange={(e) =>
                           updateAction(tIdx, aIdx, { delayMs: parseInt(e.target.value) || 0 } as any)
                         }
                       />
-                      <span className="field-unit">ms</span>
+                      <span className="field-unit">{t.sidebar.ms}</span>
                     </div>
                   )}
 
@@ -687,24 +723,24 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       <div className="action-fields">
                         <input
                           type="text"
-                          placeholder="Audio file path..."
+                          placeholder={t.sidebar.audioFilePlaceholder}
                           value={(action as PlayAudioAction).filePath || ''}
                           onChange={(e) => updateAction(tIdx, aIdx, { filePath: e.target.value } as any)}
                         />
                         <button className="btn btn-ghost btn-sm" onClick={() => browseFile(tIdx, aIdx, 'filePath', [
-                          { name: 'Audio', extensions: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'] },
-                          { name: 'All Files', extensions: ['*'] },
-                        ])}>Browse</button>
+                          { name: t.sidebar.audio, extensions: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'] },
+                          { name: t.sidebar.allFiles, extensions: ['*'] },
+                        ])}>{t.sidebar.browse}</button>
                       </div>
                       <div className="action-fields">
-                        <label className="field-label" style={{ minWidth: 'auto', fontSize: 11 }}>Vol</label>
+                        <label className="field-label" style={{ minWidth: 'auto', fontSize: 11 }}>{t.sidebar.vol}</label>
                         <input
                           type="range"
                           min="0"
                           max="100"
                           value={Math.round(((action as PlayAudioAction).volume || 1) * 100)}
                           onChange={(e) => updateAction(tIdx, aIdx, { volume: parseInt(e.target.value) / 100 } as any)}
-                          title={`Volume: ${Math.round(((action as PlayAudioAction).volume || 1) * 100)}%`}
+                          title={t.sidebar.volume.replace('{n}', String(Math.round(((action as PlayAudioAction).volume || 1) * 100)))}
                         />
                         <span className="field-unit">{Math.round(((action as PlayAudioAction).volume || 1) * 100)}%</span>
                       </div>
@@ -717,13 +753,13 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       value={(action as MediaKeyAction).key || 'play_pause'}
                       onChange={(e) => updateAction(tIdx, aIdx, { key: e.target.value } as any)}
                     >
-                      <option value="play_pause">Play / Pause</option>
-                      <option value="next_track">Next Track</option>
-                      <option value="prev_track">Previous Track</option>
-                      <option value="stop">Stop</option>
-                      <option value="volume_up">Volume Up</option>
-                      <option value="volume_down">Volume Down</option>
-                      <option value="mute">Mute</option>
+                      <option value="play_pause">{t.sidebar.playPause}</option>
+                      <option value="next_track">{t.sidebar.nextTrack}</option>
+                      <option value="prev_track">{t.sidebar.previousTrack}</option>
+                      <option value="stop">{t.sidebar.stop}</option>
+                      <option value="volume_up">{t.sidebar.volumeUp}</option>
+                      <option value="volume_down">{t.sidebar.volumeDown}</option>
+                      <option value="mute">{t.sidebar.mute}</option>
                     </select>
                   )}
 
@@ -733,7 +769,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                       value={(action as OpenFolderAction).targetLayerId || ''}
                       onChange={(e) => updateAction(tIdx, aIdx, { targetLayerId: e.target.value } as any)}
                     >
-                      <option value="">Select target layer...</option>
+                      <option value="">{t.sidebar.selectTargetLayer}</option>
                       {(activeProfile?.layers || []).map((l) => (
                         <option key={l.id} value={l.id}>{l.name}</option>
                       ))}
@@ -752,10 +788,10 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
                   }
                 }}
               >
-                <option value="">+ Add Action...</option>
+                <option value="">{t.sidebar.addAction}</option>
                 {ACTION_TYPES.map((at) => (
                   <option key={at.value} value={at.value}>
-                    {at.label}
+                    {actionTypeLabels[at.value]}
                   </option>
                 ))}
               </select>
@@ -771,7 +807,7 @@ export default function Sidebar({ selectedPad, onPadUpdate, onClose, profiles, a
               checked={pad.enabled}
               onChange={(e) => updateField('enabled', e.target.checked)}
             />
-            <span>Pad enabled</span>
+            <span>{t.sidebar.padEnabled}</span>
           </label>
         </div>
       </div>

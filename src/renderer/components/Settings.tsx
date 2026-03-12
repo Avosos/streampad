@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, DEFAULT_SETTINGS } from '../../shared/types';
+import { useLanguage } from '../hooks/useLanguage';
+import { LANGUAGES } from '@shared/i18n';
 import '../styles/sidebar.css';
 
 const api = window.streampad;
@@ -9,6 +11,7 @@ interface SettingsProps {
 }
 
 export default function Settings({ onClose }: SettingsProps) {
+  const { t, language, setLanguage } = useLanguage();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
 
@@ -33,14 +36,14 @@ export default function Settings({ onClose }: SettingsProps) {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h3>Settings</h3>
+        <h3>{t.settings.title}</h3>
         <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
       </div>
 
       <div className="sidebar-content">
         {/* Behavior */}
         <div className="field">
-          <label className="field-label">Behavior</label>
+          <label className="field-label">{t.settings.behavior}</label>
         </div>
 
         <div className="field">
@@ -50,7 +53,7 @@ export default function Settings({ onClose }: SettingsProps) {
               checked={settings.minimizeToTray}
               onChange={(e) => update('minimizeToTray', e.target.checked)}
             />
-            <span>Minimize to system tray on close</span>
+            <span>{t.settings.minimizeToTray}</span>
           </label>
         </div>
 
@@ -61,7 +64,7 @@ export default function Settings({ onClose }: SettingsProps) {
               checked={settings.startMinimized}
               onChange={(e) => update('startMinimized', e.target.checked)}
             />
-            <span>Start minimized</span>
+            <span>{t.settings.startMinimized}</span>
           </label>
         </div>
 
@@ -72,17 +75,17 @@ export default function Settings({ onClose }: SettingsProps) {
               checked={settings.autoConnect}
               onChange={(e) => update('autoConnect', e.target.checked)}
             />
-            <span>Auto-connect to last device</span>
+            <span>{t.settings.autoConnect}</span>
           </label>
         </div>
 
         {/* Timing */}
         <div className="field" style={{ marginTop: 10 }}>
-          <label className="field-label">Input Timing</label>
+          <label className="field-label">{t.settings.inputTiming}</label>
         </div>
 
         <div className="field">
-          <label className="field-label" style={{ textTransform: 'none', fontWeight: 400, fontSize: 12 }}>Hold threshold</label>
+          <label className="field-label" style={{ textTransform: 'none', fontWeight: 400, fontSize: 12 }}>{t.settings.holdThreshold}</label>
           <div className="action-fields">
             <input
               type="range"
@@ -97,7 +100,7 @@ export default function Settings({ onClose }: SettingsProps) {
         </div>
 
         <div className="field">
-          <label className="field-label" style={{ textTransform: 'none', fontWeight: 400, fontSize: 12 }}>Multi-press window</label>
+          <label className="field-label" style={{ textTransform: 'none', fontWeight: 400, fontSize: 12 }}>{t.settings.multiPressWindow}</label>
           <div className="action-fields">
             <input
               type="range"
@@ -113,46 +116,56 @@ export default function Settings({ onClose }: SettingsProps) {
 
         {/* Theme */}
         <div className="field" style={{ marginTop: 10 }}>
-          <label className="field-label">Appearance</label>
+          <label className="field-label">{t.settings.appearance}</label>
           <div className="btn-group">
             <button
               className={`btn btn-sm ${settings.theme === 'dark' ? 'btn-accent' : 'btn-ghost'}`}
               onClick={() => update('theme', 'dark')}
             >
-              Dark
+              {t.settings.dark}
             </button>
             <button
               className={`btn btn-sm ${settings.theme === 'grey' ? 'btn-accent' : 'btn-ghost'}`}
               onClick={() => update('theme', 'grey')}
             >
-              Grey
+              {t.settings.grey}
             </button>
             <button
               className={`btn btn-sm ${settings.theme === 'light' ? 'btn-accent' : 'btn-ghost'}`}
               onClick={() => update('theme', 'light')}
             >
-              Light
+              {t.settings.light}
             </button>
           </div>
         </div>
 
+        {/* Language */}
+        <div className="field" style={{ marginTop: 10 }}>
+          <label className="field-label">{t.settings.language}</label>
+          <select value={language} onChange={(e) => setLanguage(e.target.value as any)}>
+            {LANGUAGES.map((l) => (
+              <option key={l.value} value={l.value}>{l.label}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Calibration */}
         <div className="field" style={{ marginTop: 10 }}>
-          <label className="field-label">Calibration</label>
+          <label className="field-label">{t.settings.calibration}</label>
           <button
             className="btn btn-sm btn-ghost"
             onClick={() => update('calibrated', false)}
           >
-            🎹 Recalibrate Pads
+            {t.settings.recalibrate}
           </button>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            Restarts the calibration wizard on next reload
+            {t.settings.recalibrateDesc}
           </span>
         </div>
 
         {saved && (
           <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 8 }}>
-            Settings saved
+            {t.settings.settingsSaved}
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Profile } from '../../shared/types';
+import { useLanguage } from '../hooks/useLanguage';
 import '../styles/header.css';
 
 const api = window.streampad;
@@ -23,6 +24,7 @@ export default function Header({
   onImportProfile,
   onOpenSettings,
 }: HeaderProps) {
+  const { t } = useLanguage();
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
 
@@ -40,7 +42,7 @@ export default function Header({
       const json = await api.profiles.export(activeProfile.id);
       const filePath = await api.dialog.saveFile({
         defaultPath: `${activeProfile.name}.json`,
-        filters: [{ name: 'StreamPad Profile', extensions: ['json'] }],
+        filters: [{ name: t.header.streampadProfile, extensions: ['json'] }],
       });
       if (filePath && json) {
         // Write via a system command since we don't have fs in renderer
@@ -56,7 +58,7 @@ export default function Header({
   const handleImport = async () => {
     try {
       const filePath = await api.dialog.openFile({
-        filters: [{ name: 'StreamPad Profile', extensions: ['json'] }],
+        filters: [{ name: t.header.streampadProfile, extensions: ['json'] }],
       });
       if (filePath) {
         // Read the file via fetch or a custom IPC - for now use the path-based import
@@ -79,12 +81,12 @@ export default function Header({
           <rect x="3" y="14" width="7" height="7" rx="1" />
           <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
-        <span className="header-title">StreamPad</span>
+        <span className="header-title">{t.header.appName}</span>
       </div>
 
       {/* Profile controls */}
       <div className="header-profiles">
-        <label className="header-label">Profile:</label>
+        <label className="header-label">{t.header.profile}</label>
         <select
           className="profile-select"
           value={activeProfile?.id || ''}
@@ -101,22 +103,22 @@ export default function Header({
           <div className="profile-create-form">
             <input
               type="text"
-              placeholder="Profile name..."
+              placeholder={t.header.profilePlaceholder}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               autoFocus
             />
             <button className="btn btn-accent btn-sm" onClick={handleCreate}>
-              Create
+              {t.header.create}
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => setIsCreating(false)}>
-              Cancel
+              {t.header.cancel}
             </button>
           </div>
         ) : (
           <button className="btn btn-ghost btn-sm" onClick={() => setIsCreating(true)}>
-            + New
+            {t.header.newProfile}
           </button>
         )}
 
@@ -124,7 +126,7 @@ export default function Header({
           <button
             className="btn btn-danger btn-sm"
             onClick={() => onDeleteProfile(activeProfile.id)}
-            title="Delete profile"
+            title={t.header.deleteProfile}
           >
             ✕
           </button>
@@ -132,18 +134,18 @@ export default function Header({
 
         <span className="header-separator" />
 
-        <button className="btn btn-ghost btn-sm" onClick={handleExport} title="Export profile" disabled={!activeProfile}>
-          ↑ Export
+        <button className="btn btn-ghost btn-sm" onClick={handleExport} title={t.header.exportProfile} disabled={!activeProfile}>
+          {t.header.exportProfile}
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={handleImport} title="Import profile">
-          ↓ Import
+        <button className="btn btn-ghost btn-sm" onClick={handleImport} title={t.header.importProfile}>
+          {t.header.importProfile}
         </button>
       </div>
 
       <div className="header-spacer" />
 
       {/* Settings */}
-      <button className="btn btn-ghost btn-sm header-settings-btn" onClick={onOpenSettings} title="Settings">
+      <button className="btn btn-ghost btn-sm header-settings-btn" onClick={onOpenSettings} title={t.header.settings}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="3" />
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-1.42 3.42 2 2 0 0 1-1.42-.59l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-3.42-1.42 2 2 0 0 1 .59-1.42l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 1.42-3.42 2 2 0 0 1 1.42.59l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 3.42 1.42 2 2 0 0 1-.59 1.42l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -152,13 +154,13 @@ export default function Header({
 
       {/* Window controls */}
       <div className="window-controls">
-        <button className="window-btn" onClick={() => api.window.minimize()} title="Minimize">
+        <button className="window-btn" onClick={() => api.window.minimize()} title={t.header.minimize}>
           <svg viewBox="0 0 12 12" width="12" height="12"><rect x="2" y="5.5" width="8" height="1" fill="currentColor" /></svg>
         </button>
-        <button className="window-btn" onClick={() => api.window.maximize()} title="Maximize">
+        <button className="window-btn" onClick={() => api.window.maximize()} title={t.header.maximize}>
           <svg viewBox="0 0 12 12" width="12" height="12"><rect x="2.5" y="2.5" width="7" height="7" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
         </button>
-        <button className="window-btn window-btn-close" onClick={() => api.window.close()} title="Close">
+        <button className="window-btn window-btn-close" onClick={() => api.window.close()} title={t.header.close}>
           <svg viewBox="0 0 12 12" width="12" height="12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" /></svg>
         </button>
       </div>

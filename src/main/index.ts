@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, Tray, nativeImage, globalShortcut } from 'ele
 import path from 'path';
 import { AppController } from './core/AppController';
 import { setupIpcBridge } from './ipc/IpcBridge';
+import { mkdirSync } from 'fs';
 
 let mainWindow: BrowserWindow | null = null;
 let appController: AppController | null = null;
@@ -9,7 +10,10 @@ let tray: Tray | null = null;
 let isQuitting = false;
 
 const isDev = !app.isPackaged;
-
+// ─── Centralized storage under avosos ecosystem ─────────────────────────────
+const dataDir = path.join(app.getPath('appData'), 'avosos', 'apps', 'streampad');
+mkdirSync(dataDir, { recursive: true });
+app.setPath('userData', dataDir);
 // ─── Single instance lock ──────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
